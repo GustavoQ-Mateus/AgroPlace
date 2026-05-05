@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.vite/
+target/
+.idea/
+.vscode/
+*.log
+*.tmp
+*.local
+.env
+2026-*-command-message*.txt
