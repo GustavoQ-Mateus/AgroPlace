@@ -1,17 +1,23 @@
 # AgroPlace
 
-Frontend mockado do marketplace AgroPlace com schema MySQL completo e backend Spring Boot parcial.
+Interface mockada do marketplace AgroPlace com backend parcial focado em entrada e cadastro.
 
-## Frontend
+## Rodar
 
 ```bash
 npm install
 npm run dev
 ```
 
-## Banco
+## Gerar build
 
-Importe `database/schema.sql` no phpMyAdmin do XAMPP.
+```bash
+npm run build
+```
+
+## Banco de autenticação
+
+Importe `database/esquema_autenticacao.sql` no phpMyAdmin do XAMPP.
 
 ## Backend parcial
 
@@ -20,4 +26,13 @@ cd backend
 mvn spring-boot:run
 ```
 
-Configure MySQL com `DB_URL`, `DB_USERNAME` e `DB_PASSWORD` quando necessário.
+Rotas:
+
+- `POST /api/autenticacao/cadastro`
+- `POST /api/autenticacao/entrada`
+
+Tipos de conta:
+
+- `PRODUTOR`
+- `CORPORATIVA`
+- `TRANSPORTADORA`
