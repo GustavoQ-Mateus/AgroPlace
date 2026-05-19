@@ -6,18 +6,22 @@ import br.com.agroplace.autenticacao.aplicacao.dto.RespostaAutenticacao;
 import br.com.agroplace.autenticacao.dominio.ContaUsuario;
 import br.com.agroplace.autenticacao.dominio.TipoConta;
 import br.com.agroplace.autenticacao.infra.RepositorioContaUsuario;
-import java.util.UUID;
+import br.com.agroplace.compartilhado.seguranca.GeradorToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
 public class ServicoAutenticacaoPadrao implements ServicoAutenticacao {
+
     private final RepositorioContaUsuario repositorio;
     private final PasswordEncoder codificadorSenha;
+    private final GeradorToken geradorToken;
 
-    public ServicoAutenticacaoPadrao(RepositorioContaUsuario repositorio, PasswordEncoder codificadorSenha) {
+    public ServicoAutenticacaoPadrao(RepositorioContaUsuario repositorio,
+            PasswordEncoder codificadorSenha, GeradorToken geradorToken) {
         this.repositorio = repositorio;
         this.codificadorSenha = codificadorSenha;
+        this.geradorToken = geradorToken;
     }
 
     @Override
@@ -29,17 +33,17 @@ public class ServicoAutenticacaoPadrao implements ServicoAutenticacao {
             throw new IllegalArgumentException("Documento já cadastrado");
         }
         if (requisicao.tipoConta() != TipoConta.PRODUTOR && estaEmBranco(requisicao.nomeEmpresa())) {
-            throw new IllegalArgumentException("Nome da empresa obrigatório");
+            throw new IllegalArgumentException("Nome da empresa obrigatório para este tipo de conta");
         }
         String nomeEmpresa = requisicao.tipoConta() == TipoConta.PRODUTOR ? null : requisicao.nomeEmpresa();
         ContaUsuario conta = new ContaUsuario(
-            requisicao.nome(),
-            requisicao.email(),
-            requisicao.telefone(),
-            requisicao.documento(),
-            nomeEmpresa,
-            codificadorSenha.encode(requisicao.senha()),
-            requisicao.tipoConta()
+                requisicao.nome(),
+                requisicao.email(),
+                requisicao.telefone(),
+                requisicao.documento(),
+                nomeEmpresa,
+                codificadorSenha.encode(requisicao.senha()),
+                requisicao.tipoConta()
         );
         return montarResposta(repositorio.save(conta));
     }
@@ -47,8 +51,8 @@ public class ServicoAutenticacaoPadrao implements ServicoAutenticacao {
     @Override
     public RespostaAutenticacao entrar(RequisicaoEntrada requisicao) {
         ContaUsuario conta = repositorio.findByEmail(requisicao.email())
-            .filter(ContaUsuario::isAtivo)
-            .orElseThrow(() -> new IllegalArgumentException("Credenciais inválidas"));
+                .filter(ContaUsuario::isAtivo)
+                .orElseThrow(() -> new IllegalArgumentException("Credenciais inválidas"));
         if (!codificadorSenha.matches(requisicao.senha(), conta.getSenhaHash())) {
             throw new IllegalArgumentException("Credenciais inválidas");
         }
@@ -57,14 +61,14 @@ public class ServicoAutenticacaoPadrao implements ServicoAutenticacao {
 
     private RespostaAutenticacao montarResposta(ContaUsuario conta) {
         return new RespostaAutenticacao(
-            conta.getId(),
-            conta.getNome(),
-            conta.getEmail(),
-            conta.getTelefone(),
-            conta.getDocumento(),
-            conta.getNomeEmpresa(),
-            conta.getTipoConta().name(),
-            UUID.randomUUID().toString()
+                conta.getId(),
+                conta.getNome(),
+                conta.getEmail(),
+                conta.getTelefone(),
+                conta.getDocumento(),
+                conta.getNomeEmpresa(),
+                conta.getTipoConta().name(),
+                geradorToken.gerar(conta)
         );
     }
 
