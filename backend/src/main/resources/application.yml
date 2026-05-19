@@ -2,7 +2,7 @@ spring:
   application:
     name: agroplace-api
   datasource:
-    url: ${DB_URL:jdbc:mysql://localhost:3306/agroplace_autenticacao?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=America/Fortaleza}
+    url: ${DB_URL:jdbc:mysql://localhost:3306/agroplace?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=America/Fortaleza}
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:}
   jpa:
@@ -12,5 +12,10 @@ spring:
     properties:
       hibernate:
         format_sql: true
+
+jwt:
+  secret: ${JWT_SECRET:agroplace-secret-key-deve-ter-pelo-menos-32-caracteres}
+  expiracao-ms: 86400000
+
 server:
   port: ${SERVER_PORT:8080}
