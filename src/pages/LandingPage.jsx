@@ -1,57 +1,51 @@
 import { Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
-import {
-  ArrowRight,
-  BarChart3,
-  CheckCircle2,
-  FileCheck2,
-  MessageSquare,
-  Shield,
-  Star,
-  Truck,
-} from 'lucide-react'
+import { ArrowRight, CheckCircle2, FileCheck2, MessageSquare, Shield, Truck } from 'lucide-react'
 import AnimalCard from '../components/AnimalCard'
 import CategoryGrid from '../components/sections/CategoryGrid'
 import HeroSection from '../components/sections/HeroSection'
 import Button from '../components/ui/Button'
 import { FEATURED_ANIMALS } from '../data/mockAnimals'
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 22 },
-  visible: (index = 0) => ({
-    opacity: 1,
-    y: 0,
-    transition: { delay: index * 0.08, duration: 0.42, ease: 'easeOut' },
-  }),
-}
-
 function FeaturedSection() {
   return (
-    <section className="bg-slate-50 py-16 sm:py-20">
+    <section className="border-b border-slate-200 bg-slate-50 py-12">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="mb-9 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="mb-6 flex items-end justify-between">
           <div>
-            <p className="mb-2 flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-emerald-600">
-              <BarChart3 size={16} />
-              Lotes em destaque
-            </p>
-            <h2 className="text-3xl font-black text-emerald-950">Oportunidades prontas para análise</h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-              Cards com imagem real, vendedor, rastreabilidade, localização e preço por cabeça para uma leitura rápida.
-            </p>
+            <p className="section-label mb-1">Lotes em destaque</p>
+            <h2 className="text-2xl font-black text-emerald-950">Oportunidades prontas para análise</h2>
           </div>
           <Link to="/catalogo">
-            <Button variant="outline">
+            <Button variant="outline" size="sm">
               Ver catálogo
-              <ArrowRight size={16} />
+              <ArrowRight size={14} />
             </Button>
           </Link>
         </div>
 
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {FEATURED_ANIMALS.map((animal, index) => (
-            <AnimalCard animal={animal} index={index} key={animal.id} />
-          ))}
+        <div className="border border-slate-200 bg-white">
+          {/* Column headers */}
+          <div className="hidden grid-cols-[56px_1fr_auto_auto_auto_auto] items-center gap-4 border-b border-slate-200 bg-slate-50 px-5 py-2.5 sm:grid">
+            <span />
+            <span className="prop-label">Lote / Produtor</span>
+            <span className="prop-label text-right">Cabeças</span>
+            <span className="prop-label text-right">Rastreab.</span>
+            <span className="prop-label text-right">Preço total</span>
+            <span />
+          </div>
+          <div>
+            {FEATURED_ANIMALS.slice(0, 8).map((animal, index) => (
+              <AnimalCard animal={animal} index={index} key={animal.id} />
+            ))}
+          </div>
+          <div className="border-t border-slate-200 bg-slate-50 px-5 py-3 text-center">
+            <Link
+              to="/catalogo"
+              className="text-sm font-bold text-emerald-600 transition hover:text-emerald-800"
+            >
+              Ver todos os lotes disponíveis
+            </Link>
+          </div>
         </div>
       </div>
     </section>
@@ -83,32 +77,33 @@ function WorkflowSection() {
   ]
 
   return (
-    <section className="bg-white py-16 sm:py-20">
+    <section className="border-b border-slate-200 bg-white py-12">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="mb-10 max-w-3xl">
-          <p className="mb-2 text-sm font-bold uppercase tracking-wide text-emerald-600">Da busca à entrega</p>
-          <h2 className="text-3xl font-black text-emerald-950">Um marketplace feito para decisão, não para vitrine vazia</h2>
+        <div className="mb-8">
+          <p className="section-label mb-1">Da busca à entrega</p>
+          <h2 className="text-2xl font-black text-emerald-950">Fluxo comercial integrado em quatro etapas</h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+            Cada etapa entrega dados e controles que eliminam a troca de arquivos fora da plataforma.
+          </p>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {steps.map((step, index) => (
-            <motion.div
-              className="rounded-lg border border-slate-200 bg-slate-50 p-5"
-              custom={index}
-              initial="hidden"
-              key={step.title}
-              variants={fadeUp}
-              viewport={{ once: true, margin: '-70px' }}
-              whileInView="visible"
-            >
-              <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-lg bg-white text-emerald-700 shadow-sm">
-                <step.icon size={22} />
+        <div className="border border-slate-200">
+          <div className="grid divide-y divide-slate-200 sm:grid-cols-4 sm:divide-x sm:divide-y-0">
+            {steps.map((step, index) => (
+              <div key={step.title} className="px-6 py-6">
+                <div className="mb-4 flex items-center gap-3">
+                  <span className="flex h-7 w-7 items-center justify-center bg-emerald-600 text-white text-xs font-black">
+                    {String(index + 1).padStart(2, '0')}
+                  </span>
+                  <h3 className="font-black text-emerald-950">{step.title}</h3>
+                </div>
+                <div className="mb-4 flex h-10 w-10 items-center justify-center border border-slate-200 bg-slate-50 text-emerald-700">
+                  <step.icon size={20} />
+                </div>
+                <p className="text-sm leading-6 text-slate-600">{step.text}</p>
               </div>
-              <p className="text-xs font-black uppercase tracking-wide text-slate-400">0{index + 1}</p>
-              <h3 className="mt-1 text-lg font-black text-emerald-950">{step.title}</h3>
-              <p className="mt-2 text-sm leading-6 text-slate-600">{step.text}</p>
-            </motion.div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     </section>
@@ -117,47 +112,49 @@ function WorkflowSection() {
 
 function TrustSection() {
   const testimonials = [
-    ['Carlos Mendes', 'Produtor em MT', 'Vendi meu lote em três dias porque o comprador conseguiu validar origem e vacinação sem pedir arquivo por fora.'],
-    ['Ana Paula Rocha', 'Compradora em SP', 'O catálogo ficou muito mais objetivo. Peso, genética, sanidade e frete aparecem no mesmo lugar.'],
-    ['Rodrigo Fonseca', 'Transportadora em GO', 'As cotações chegam com rota, volume e janela de coleta. Fica bem mais fácil fechar frete.'],
+    ['Carlos Mendes', 'Produtor · Mato Grosso', 'Vendi meu lote em três dias porque o comprador conseguiu validar origem e vacinação sem pedir arquivo por fora.'],
+    ['Ana Paula Rocha', 'Compradora · São Paulo', 'O catálogo ficou muito mais objetivo. Peso, genética, sanidade e frete aparecem no mesmo lugar.'],
+    ['Rodrigo Fonseca', 'Transportadora · Goiás', 'As cotações chegam com rota, volume e janela de coleta. Fica bem mais fácil fechar frete.'],
   ]
 
   return (
-    <section className="bg-emerald-950 py-16 text-white sm:py-20">
+    <section className="border-b border-slate-200 bg-emerald-950 py-12">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="mb-10 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="mb-8 grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
           <div>
-            <p className="mb-2 text-sm font-bold uppercase tracking-wide text-emerald-300">Confiança operacional</p>
-            <h2 className="text-3xl font-black">Produtores, compradores e frete no mesmo ritmo</h2>
+            <p className="mb-1 text-xs font-bold uppercase tracking-wide text-emerald-400">Confiança operacional</p>
+            <h2 className="text-2xl font-black text-white">Produtores, compradores e transportadoras no mesmo ritmo</h2>
           </div>
-          <div className="flex items-center gap-2 text-sm font-semibold text-emerald-100">
-            <CheckCircle2 size={17} className="text-emerald-300" />
+          <div className="flex items-center gap-2 text-sm font-semibold text-emerald-200">
+            <CheckCircle2 size={14} className="text-emerald-400" />
             Score médio de rastreabilidade 91%
           </div>
         </div>
 
-        <div className="grid gap-5 md:grid-cols-3">
-          {testimonials.map(([name, role, text], index) => (
-            <motion.figure
-              className="rounded-lg border border-white/10 bg-white/10 p-6 backdrop-blur"
-              custom={index}
-              initial="hidden"
-              key={name}
-              variants={fadeUp}
-              viewport={{ once: true, margin: '-70px' }}
-              whileInView="visible"
-            >
-              <div className="mb-4 flex gap-1">
-                {Array.from({ length: 5 }).map((_, star) => (
-                  <Star className="fill-amber-400 text-amber-400" key={star} size={15} />
-                ))}
+        {/* Metric strip */}
+        <div className="mb-6 grid grid-cols-3 gap-px bg-emerald-800">
+          {[
+            ['R$ 48M', 'Negociados/mês'],
+            ['12.400', 'Produtores ativos'],
+            ['91%', 'Score médio'],
+          ].map(([value, label]) => (
+            <div key={label} className="bg-emerald-950 px-6 py-5">
+              <p className="text-2xl font-black text-white">{value}</p>
+              <p className="mt-0.5 text-xs font-semibold uppercase tracking-wide text-emerald-400">{label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Testimonial rows */}
+        <div className="border border-emerald-800 divide-y divide-emerald-800">
+          {testimonials.map(([name, role, text]) => (
+            <div key={name} className="grid gap-4 px-5 py-4 sm:grid-cols-[180px_1fr] sm:items-center">
+              <div>
+                <p className="text-sm font-bold text-white">{name}</p>
+                <p className="mt-0.5 text-xs text-emerald-400">{role}</p>
               </div>
-              <blockquote className="text-sm leading-6 text-emerald-50/90">"{text}"</blockquote>
-              <figcaption className="mt-5">
-                <p className="font-bold text-white">{name}</p>
-                <p className="text-xs font-medium text-emerald-300">{role}</p>
-              </figcaption>
-            </motion.figure>
+              <p className="text-sm leading-6 text-emerald-100/80">"{text}"</p>
+            </div>
           ))}
         </div>
       </div>
@@ -167,27 +164,31 @@ function TrustSection() {
 
 function CtaSection() {
   return (
-    <section className="bg-white py-16 sm:py-20">
-      <div className="mx-auto max-w-5xl px-4 text-center sm:px-6 lg:px-8">
-        <p className="mb-3 text-sm font-bold uppercase tracking-wide text-emerald-600">Comece agora</p>
-        <h2 className="text-3xl font-black leading-tight text-emerald-950 sm:text-5xl">
-          Publique, negocie e entregue com menos atrito
-        </h2>
-        <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-slate-600">
-          A próxima tela já leva você para o onboarding de perfil ou para o catálogo com filtros completos.
-        </p>
-        <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-          <Link to="/auth?tab=register&role=vendedor">
-            <Button size="lg">
-              Criar conta vendedora
-              <ArrowRight size={18} />
-            </Button>
-          </Link>
-          <Link to="/catalogo">
-            <Button size="lg" variant="outline">
-              Explorar catálogo
-            </Button>
-          </Link>
+    <section className="bg-white py-12">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="grid gap-8 border border-slate-200 bg-slate-50 p-8 lg:grid-cols-[1fr_auto] lg:items-center">
+          <div>
+            <p className="section-label mb-1">Comece agora</p>
+            <h2 className="text-2xl font-black text-emerald-950">
+              Publique, negocie e entregue com menos atrito
+            </h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+              O onboarding de perfil leva menos de 5 minutos. O catálogo com filtros completos já está disponível para acesso imediato.
+            </p>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Link to="/auth?tab=register&role=vendedor">
+              <Button size="lg">
+                Criar conta vendedora
+                <ArrowRight size={16} />
+              </Button>
+            </Link>
+            <Link to="/catalogo">
+              <Button size="lg" variant="outline">
+                Explorar catálogo
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
     </section>

@@ -1,0 +1,1701 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AgroPlace — Trabalho Final · Ambiente de Dados · UNIFOR 2026.1</title>
+<style>
+  /* ── Reset & Base ────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --green-950: #052e16;
+    --green-800: #166534;
+    --green-700: #15803d;
+    --green-600: #16a34a;
+    --green-500: #22c55e;
+    --green-400: #4ade80;
+    --green-200: #bbf7d0;
+    --green-50:  #f0fdf4;
+    --slate-900: #0f172a;
+    --slate-800: #1e293b;
+    --slate-700: #334155;
+    --slate-600: #475569;
+    --slate-400: #94a3b8;
+    --slate-200: #e2e8f0;
+    --slate-100: #f1f5f9;
+    --white:     #ffffff;
+    --amber-400: #fbbf24;
+    --amber-200: #fde68a;
+    --blue-400:  #60a5fa;
+    --blue-200:  #bfdbfe;
+    --purple-400:#c084fc;
+    --purple-200:#e9d5ff;
+    --red-400:   #f87171;
+  }
+
+  html, body {
+    height: 100%;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--slate-900);
+    color: var(--white);
+    overflow: hidden;
+  }
+
+  /* ── Progress bar ────────────────────────────────────────── */
+  #progress-bar {
+    position: fixed;
+    top: 0; left: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--green-500), var(--green-400));
+    transition: width 0.4s ease;
+    z-index: 100;
+  }
+
+  /* ── Slide container ─────────────────────────────────────── */
+  #slideshow {
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 48px 64px;
+    opacity: 0;
+    transform: translateX(60px);
+    transition: opacity 0.45s ease, transform 0.45s ease;
+    pointer-events: none;
+    overflow-y: auto;
+  }
+  .slide.active {
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: auto;
+  }
+  .slide.exit-left {
+    opacity: 0;
+    transform: translateX(-60px);
+  }
+
+  /* ── Navigation ──────────────────────────────────────────── */
+  #nav {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(15,23,42,0.85);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.08);
+    padding: 10px 20px;
+    border-radius: 999px;
+    z-index: 50;
+  }
+  #nav button {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.12);
+    color: var(--white);
+    padding: 6px 16px;
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: background 0.2s;
+  }
+  #nav button:hover { background: rgba(255,255,255,0.14); }
+  #nav button:disabled { opacity: 0.3; cursor: default; }
+  #slide-counter { font-size: 12px; color: var(--slate-400); min-width: 60px; text-align: center; }
+
+  /* ── Slide-number dots ───────────────────────────────────── */
+  #dots {
+    position: fixed;
+    right: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    z-index: 50;
+  }
+  .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.2);
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+  }
+  .dot.active { background: var(--green-500); transform: scale(1.4); }
+
+  /* ── Keyboard hint ───────────────────────────────────────── */
+  #hint {
+    position: fixed;
+    top: 16px;
+    right: 24px;
+    font-size: 11px;
+    color: var(--slate-600);
+    z-index: 50;
+  }
+
+  /* ── Typography helpers ──────────────────────────────────── */
+  .label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--green-400);
+    margin-bottom: 8px;
+  }
+  h1 { font-size: clamp(2.4rem, 5vw, 3.8rem); font-weight: 900; line-height: 1.1; }
+  h2 { font-size: clamp(1.6rem, 3vw, 2.4rem); font-weight: 800; line-height: 1.2; }
+  h3 { font-size: 1.1rem; font-weight: 700; }
+  .subtitle { font-size: clamp(0.9rem, 1.4vw, 1.05rem); color: var(--slate-400); line-height: 1.6; }
+  .accent { color: var(--green-400); }
+  .highlight { color: var(--amber-400); }
+
+  /* ── Cards & panels ──────────────────────────────────────── */
+  .card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 20px 24px;
+  }
+  .card-green {
+    background: rgba(22,163,74,0.1);
+    border-color: rgba(74,222,128,0.2);
+  }
+  .card-amber {
+    background: rgba(251,191,36,0.08);
+    border-color: rgba(251,191,36,0.25);
+  }
+  .card-blue {
+    background: rgba(96,165,250,0.08);
+    border-color: rgba(96,165,250,0.25);
+  }
+  .card-purple {
+    background: rgba(192,132,252,0.08);
+    border-color: rgba(192,132,252,0.25);
+  }
+  .card-red {
+    background: rgba(248,113,113,0.08);
+    border-color: rgba(248,113,113,0.25);
+  }
+
+  /* ── Grid helpers ────────────────────────────────────────── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+  .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; }
+
+  /* ── Code blocks ─────────────────────────────────────────── */
+  .code-block {
+    background: #0d1117;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
+    padding: 16px 20px;
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    font-size: 12.5px;
+    line-height: 1.7;
+    overflow-x: auto;
+    white-space: pre;
+    color: #e6edf3;
+  }
+  .kw  { color: #ff7b72; }
+  .ty  { color: #79c0ff; }
+  .fn  { color: #d2a8ff; }
+  .str { color: #a5d6ff; }
+  .cm  { color: #8b949e; font-style: italic; }
+  .num { color: #f2cc60; }
+  .op  { color: #ffa657; }
+
+  /* ── Entity boxes for DER ────────────────────────────────── */
+  .entity {
+    border: 2px solid var(--green-600);
+    border-radius: 8px;
+    background: rgba(22,163,74,0.08);
+    overflow: hidden;
+  }
+  .entity-header {
+    background: var(--green-800);
+    padding: 7px 14px;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--green-200);
+  }
+  .entity-body { padding: 10px 14px; }
+  .entity-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11.5px;
+    padding: 2px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    color: var(--slate-300);
+  }
+  .entity-row:last-child { border: none; }
+  .entity-row .pk  { color: var(--amber-400); font-weight: 700; }
+  .entity-row .fk  { color: var(--blue-400); }
+  .entity-row .der { color: var(--purple-400); font-style: italic; }
+  .entity-row .type { color: var(--slate-500); font-size: 10.5px; }
+  .entity-nm { border-color: var(--amber-400); background: rgba(251,191,36,0.06); }
+  .entity-nm .entity-header { background: #78350f; color: var(--amber-200); }
+
+  /* ── Relation line indicators ────────────────────────────── */
+  .rel-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 999px;
+    letter-spacing: 0.04em;
+  }
+  .rel-1n  { background: rgba(96,165,250,0.15); color: var(--blue-400); border: 1px solid rgba(96,165,250,0.3); }
+  .rel-nm  { background: rgba(251,191,36,0.12); color: var(--amber-400); border: 1px solid rgba(251,191,36,0.35); }
+  .rel-11  { background: rgba(74,222,128,0.1);  color: var(--green-400); border: 1px solid rgba(74,222,128,0.3); }
+
+  /* ── Checklist ───────────────────────────────────────────── */
+  .check-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    font-size: 14px;
+  }
+  .check-row:last-child { border: none; }
+  .check-icon { flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; margin-top: 1px; }
+  .ok   { background: rgba(74,222,128,0.2); color: var(--green-400); border: 1px solid rgba(74,222,128,0.4); }
+  .num-circle { background: rgba(96,165,250,0.15); color: var(--blue-400); border: 1px solid rgba(96,165,250,0.35); font-size: 10px; }
+
+  /* ── Trigger pill ────────────────────────────────────────── */
+  .trigger-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
+    text-transform: uppercase; padding: 3px 9px; border-radius: 4px;
+  }
+  .before-pill { background: rgba(251,191,36,0.15); color: var(--amber-400); border: 1px solid rgba(251,191,36,0.4); }
+  .after-pill  { background: rgba(192,132,252,0.12); color: var(--purple-400); border: 1px solid rgba(192,132,252,0.35); }
+  .view-pill   { background: rgba(96,165,250,0.1);  color: var(--blue-400);   border: 1px solid rgba(96,165,250,0.3); }
+
+  /* ── Counter animation ───────────────────────────────────── */
+  .counter { font-size: 2.8rem; font-weight: 900; color: var(--green-400); line-height: 1; }
+  .counter-label { font-size: 12px; color: var(--slate-400); margin-top: 4px; }
+
+  /* ── Slide-specific backgrounds ─────────────────────────── */
+  .slide-cover { background: radial-gradient(ellipse at 30% 60%, rgba(22,163,74,0.18) 0%, transparent 65%), var(--slate-900); }
+  .slide-dark  { background: var(--slate-900); }
+  .slide-alt   { background: linear-gradient(135deg, #0a1628 0%, #0f172a 100%); }
+
+  /* ── Divider ─────────────────────────────────────────────── */
+  hr.divider { border: none; border-top: 1px solid rgba(255,255,255,0.07); margin: 16px 0; }
+
+  /* ── Tag ─────────────────────────────────────────────────── */
+  .tag {
+    display: inline-block;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.07em;
+    text-transform: uppercase; padding: 2px 8px; border-radius: 4px;
+    background: rgba(74,222,128,0.1); color: var(--green-400);
+    border: 1px solid rgba(74,222,128,0.25);
+  }
+  .tag-amber { background: rgba(251,191,36,0.1); color: var(--amber-400); border-color: rgba(251,191,36,0.3); }
+  .tag-blue  { background: rgba(96,165,250,0.1); color: var(--blue-400);  border-color: rgba(96,165,250,0.3); }
+  .tag-purple{ background: rgba(192,132,252,0.1); color: var(--purple-400); border-color: rgba(192,132,252,0.3); }
+  .tag-red   { background: rgba(248,113,113,0.1); color: var(--red-400);   border-color: rgba(248,113,113,0.3); }
+
+  /* ── Arrow connector ─────────────────────────────────────── */
+  .arrow { color: var(--slate-600); font-size: 18px; display: flex; align-items: center; justify-content: center; }
+
+  /* ── Responsive guard ────────────────────────────────────── */
+  @media (max-width: 900px) {
+    .slide { padding: 32px 24px; }
+    .grid-3 { grid-template-columns: 1fr 1fr; }
+    .grid-4 { grid-template-columns: 1fr 1fr; }
+  }
+
+  /* ── Fade-in animation for content blocks ────────────────── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .slide.active .animate {
+    animation: fadeUp 0.5s ease forwards;
+    opacity: 0;
+  }
+  .slide.active .animate:nth-child(1) { animation-delay: 0.05s; }
+  .slide.active .animate:nth-child(2) { animation-delay: 0.12s; }
+  .slide.active .animate:nth-child(3) { animation-delay: 0.19s; }
+  .slide.active .animate:nth-child(4) { animation-delay: 0.26s; }
+  .slide.active .animate:nth-child(5) { animation-delay: 0.33s; }
+  .slide.active .animate:nth-child(6) { animation-delay: 0.40s; }
+  .slide.active .animate:nth-child(7) { animation-delay: 0.47s; }
+  .slide.active .animate:nth-child(8) { animation-delay: 0.54s; }
+
+  /* ── Score bar ───────────────────────────────────────────── */
+  .score-bar-wrap { background: rgba(255,255,255,0.06); border-radius: 999px; height: 8px; overflow: hidden; }
+  .score-bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--green-600), var(--green-400)); transition: width 1s ease 0.5s; width: 0%; }
+
+  /* ── Glow accent ─────────────────────────────────────────── */
+  .glow { text-shadow: 0 0 30px rgba(74,222,128,0.4); }
+
+  /* Flex utils */
+  .flex { display: flex; }
+  .flex-col { display: flex; flex-direction: column; }
+  .items-center { align-items: center; }
+  .items-start { align-items: flex-start; }
+  .justify-between { justify-content: space-between; }
+  .gap-2 { gap: 8px; }
+  .gap-3 { gap: 12px; }
+  .gap-4 { gap: 16px; }
+  .gap-6 { gap: 24px; }
+  .gap-8 { gap: 32px; }
+  .mt-1 { margin-top: 4px; }
+  .mt-2 { margin-top: 8px; }
+  .mt-3 { margin-top: 12px; }
+  .mt-4 { margin-top: 16px; }
+  .mt-6 { margin-top: 24px; }
+  .mt-8 { margin-top: 32px; }
+  .mb-2 { margin-bottom: 8px; }
+  .mb-4 { margin-bottom: 16px; }
+  .mb-6 { margin-bottom: 24px; }
+  .flex-1 { flex: 1; }
+  .w-full { width: 100%; }
+  .text-sm { font-size: 13px; }
+  .text-xs { font-size: 11.5px; }
+  .text-right { text-align: right; }
+  .opacity-60 { opacity: 0.6; }
+</style>
+</head>
+<body>
+
+<div id="progress-bar"></div>
+<div id="hint">← → Setas do teclado</div>
+<div id="dots"></div>
+<div id="nav">
+  <button id="btn-prev">← Anterior</button>
+  <span id="slide-counter">1 / 14</span>
+  <button id="btn-next">Próximo →</button>
+</div>
+
+<div id="slideshow">
+
+  <!-- ═══════════════════════════════════════════════
+       SLIDE 1 — CAPA
+  ═══════════════════════════════════════════════ -->
+  <section class="slide slide-cover active" id="s1">
+    <div class="flex-1 flex flex-col" style="justify-content:center;">
+      <div class="animate">
+        <p class="label">Trabalho Final · Ambiente de Dados · UNIFOR 2026.1</p>
+      </div>
+      <div class="animate mt-4">
+        <h1>
+          Agro<span class="accent glow">Place</span>
+        </h1>
+        <h1 style="color:var(--slate-400); font-size:clamp(1.4rem,2.5vw,2.2rem); font-weight:700; margin-top:8px;">
+          Modelagem e Implementação de Banco de Dados
+        </h1>
+      </div>
+      <div class="animate mt-6">
+        <p class="subtitle" style="max-width:560px;">
+          Marketplace B2B/B2C para comercialização de animais vivos —
+          do produtor ao comprador com rastreabilidade, contratos e logística integrada.
+        </p>
+      </div>
+
+      <div class="animate mt-8 flex gap-4" style="flex-wrap:wrap;">
+        <div class="card" style="min-width:180px;">
+          <p class="text-xs opacity-60 mb-2">Professor</p>
+          <p style="font-weight:700; font-size:14px;">Pedro Hericson M. Araújo</p>
+        </div>
+        <div class="card" style="min-width:180px;">
+          <p class="text-xs opacity-60 mb-2">Disciplina</p>
+          <p style="font-weight:700; font-size:14px;">Ambiente de Dados</p>
+        </div>
+        <div class="card" style="min-width:160px;">
+          <p class="text-xs opacity-60 mb-2">Semestre</p>
+          <p style="font-weight:700; font-size:14px;">2026.1 · UNIFOR</p>
+        </div>
+        <div class="card" style="min-width:160px;">
+          <p class="text-xs opacity-60 mb-2">SGBD</p>
+          <p style="font-weight:700; font-size:14px;">PostgreSQL 15+</p>
+        </div>
+      </div>
+
+      <div class="animate mt-8 flex gap-3" style="flex-wrap:wrap;">
+        <span class="tag">13 Tabelas</span>
+        <span class="tag">2 N:M</span>
+        <span class="tag">3NF</span>
+        <span class="tag-amber tag">2 Views</span>
+        <span class="tag-purple tag">3 Triggers</span>
+        <span class="tag-blue tag">7 Queries</span>
+        <span class="tag-red tag">Auditoria</span>
+      </div>
+    </div>
+
+    <div class="animate" style="border-top:1px solid rgba(255,255,255,0.06); padding-top:16px; margin-top:16px;">
+      <p class="text-xs opacity-60">Navegue com as <strong>setas do teclado</strong> ou clique nos botões abaixo</p>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════
+       SLIDE 2 — VISÃO GERAL DO PROJETO
+  ═══════════════════════════════════════════════ -->
+  <section class="slide slide-dark" id="s2">
+    <div class="animate">
+      <p class="label">Slide 2 · Contexto</p>
+      <h2>Visão geral do projeto</h2>
+      <p class="subtitle mt-2">AgroPlace conecta produtores rurais, compradores corporativos e transportadoras numa plataforma única.</p>
+    </div>
+
+    <div class="grid-3 mt-6 animate">
+      <div class="card card-green">
+        <div style="font-size:28px; margin-bottom:8px;">🌾</div>
+        <h3>Produtor Rural</h3>
+        <p class="text-sm mt-2" style="color:var(--slate-400);">Publica anúncios de lotes com documentação sanitária, define preço e gerencia propostas recebidas.</p>
+      </div>
+      <div class="card card-blue">
+        <div style="font-size:28px; margin-bottom:8px;">🏢</div>
+        <h3>Comprador</h3>
+        <p class="text-sm mt-2" style="color:var(--slate-400);">Busca lotes por espécie, raça e localização; envia propostas; acompanha contratos e entregas.</p>
+      </div>
+      <div class="card card-amber">
+        <div style="font-size:28px; margin-bottom:8px;">🚛</div>
+        <h3>Transportadora</h3>
+        <p class="text-sm mt-2" style="color:var(--slate-400);">Recebe solicitações de frete, envia cotações e confirma rotas com rastreamento de embarque.</p>
+      </div>
+    </div>
+
+    <div class="animate mt-6">
+      <div class="card" style="padding:24px;">
+        <div class="flex items-center gap-3 mb-4">
+          <span class="tag">Fluxo principal</span>
+        </div>
+        <div class="flex items-center gap-3" style="flex-wrap:wrap;">
+          <div class="card" style="padding:10px 16px; font-size:13px; font-weight:700;">📋 Anúncio</div>
+          <div class="arrow">→</div>
+          <div class="card" style="padding:10px 16px; font-size:13px; font-weight:700;">💬 Proposta</div>
+          <div class="arrow">→</div>
+          <div class="card" style="padding:10px 16px; font-size:13px; font-weight:700;">📄 Contrato</div>
+          <div class="arrow">→</div>
+          <div class="card" style="padding:10px 16px; font-size:13px; font-weight:700;">🚚 Frete</div>
+          <div class="arrow">→</div>
+          <div class="card card-green" style="padding:10px 16px; font-size:13px; font-weight:700; color:var(--green-400);">✅ Entrega</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="animate mt-6 grid-4">
+      <div class="card" style="text-align:center;">
+        <div class="counter" data-target="13">0</div>
+        <div class="counter-label">Tabelas</div>
+      </div>
+      <div class="card" style="text-align:center;">
+        <div class="counter" data-target="8">0</div>
+        <div class="counter-label">Entidades</div>
+      </div>
+      <div class="card" style="text-align:center;">
+        <div class="counter" data-target="2">0</div>
+        <div class="counter-label">Rel. N:M</div>
+      </div>
+      <div class="card" style="text-align:center;">
+        <div class="counter" data-target="3">0</div>
+        <div class="counter-label">Triggers</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════
+       SLIDE 3 — DER (Diagrama Entidade-Relacionamento)
+  ═══════════════════════════════════════════════ -->
+  <section class="slide slide-alt" id="s3">
+    <div class="animate">
+      <p class="label">Slide 3 · Modelagem</p>
+      <h2>DER — Diagrama Entidade-Relacionamento</h2>
+    </div>
+
+    <div class="animate mt-4 flex gap-3" style="flex-wrap:wrap; align-items:center;">
+      <span class="rel-badge rel-1n">1:N — Um para Muitos</span>
+      <span class="rel-badge rel-nm">N:M — Tabela Associativa</span>
+      <span class="rel-badge rel-11">1:1 — Um para Um</span>
+    </div>
+
+    <div class="animate mt-4" style="display:grid; grid-template-columns: repeat(4,1fr); gap:10px; font-size:12px;">
+
+      <div class="entity">
+        <div class="entity-header">👤 usuarios</div>
+        <div class="entity-body">
+          <div class="entity-row"><span class="pk">PK id</span><span class="type">UUID</span></div>
+          <div class="entity-row"><span>nome</span><span class="type">VARCHAR</span></div>
+          <div class="entity-row"><span>email</span><span class="type">UNIQUE</span></div>
+          <div class="entity-row"><span>perfil</span><span class="type">CHECK</span></div>
+          <div class="entity-row"><span>verificado</span><span class="type">BOOL</span></div>
+        </div>
+      </div>
+
+      <div class="entity" style="border-color:var(--blue-400);">
+        <div class="entity-header" style="background:#1e3a5f; color:var(--blue-200);">🌾 anuncios</div>
+        <div class="entity-body">
+          <div class="entity-row"><span class="pk">PK id</span><span class="type">UUID</span></div>
+          <div class="entity-row"><span class="fk">FK produtor_id</span><span class="type">→ usuarios</span></div>
+          <div class="entity-row"><span>especie</span><span class="type">CHECK</span></div>
+          <div class="entity-row"><span>preco_total</span><span class="type">NUMERIC</span></div>
+          <div class="entity-row"><span class="der">preco_por_cabeca</span><span class="type">GENERATED</span></div>
+          <div class="entity-row"><span class="der">score_rastreab.</span><span class="type">TRIGGER</span></div>
+        </div>
+      </div>
+
+      <div class="entity entity-nm">
+        <div class="entity-header">⭐ favoritos (N:M)</div>
+        <div class="entity-body">
+          <div class="entity-row"><span class="pk">PK id</span><span class="type">UUID</span></div>
+          <div class="entity-row"><span class="fk">FK usuario_id</span><span class="type">→ usuarios</span></div>
+          <div class="entity-row"><span class="fk">FK anuncio_id</span><span class="type">→ anuncios</span></div>
+          <div class="entity-row"><span style="color:var(--amber-400); font-size:10.5px;">UNIQUE(usuario,anuncio)</span><span></span></div>
+        </div>
+      </div>
+
+      <div class="entity">
+        <div class="entity-header">💬 propostas</div>
+        <div class="entity-body">
+          <div class="entity-row"><span class="pk">PK id</span><span class="type">UUID</span></div>
+          <div class="entity-row"><span class="fk">FK anuncio_id</span><span class="type">→ anuncios</span></div>
+          <div class="entity-row"><span class="fk">FK comprador_id</span><span class="type">→ usuarios</span></div>
+          <div class="entity-row"><span class="fk">FK vendedor_id</span><span class="type">→ usuarios</span></div>
+          <div class="entity-row"><span>status</span><span class="type">CHECK</span></div>
+        </div>
+      </div>
+
+      <div class="entity">
+        <div class="entity-header">📋 rastreabilidade</div>
+        <div class="entity-body">
+          <div class="entity-row"><span class="pk">PK id</span><span class="type">UUID</span></div>
+          <div class="entity-row"><span class="fk">FK anuncio_id</span><span class="type">UNIQUE</span></div>
+          <div class="entity-row"><span>gta, brucela…</span><span class="type">BOOLEAN</span></div>
+          <div class="entity-row"><span class="der">→ score</span><span class="type">TRIGGER</span></div>
+        </div>
+      </div>
+
+      <div class="entity">
+        <div class="entity-header">📄 contratos</div>
+        <div class="entity-body">
+          <div class="entity-row"><span class="pk">PK id</span><span class="type">UUID</span></div>
+          <div class="entity-row"><span class="fk">FK proposta_id</span><span class="type">UNIQUE</span></div>
+          <div class="entity-row"><span>valor_final</span><span class="type">NUMERIC</span></div>
+          <div class="entity-row"><span>status</span><span class="type">CHECK</span></div>
+        </div>
+      </div>
+
+      <div class="entity">
+        <div class="entity-header">🚛 solicitacoes_frete</div>
+        <div class="entity-body">
+          <div class="entity-row"><span class="pk">PK id</span><span class="type">UUID</span></div>
+          <div class="entity-row"><span class="fk">FK solicitante_id</span><span class="type">→ usuarios</span></div>
+          <div class="entity-row"><span>origem/destino</span><span class="type">VARCHAR</span></div>
+          <div class="entity-row"><span>especie, qtd</span><span class="type">CHECK</span></div>
+        </div>
+      </div>
+
+      <div class="entity entity-nm">
+        <div class="entity-header">💰 cotacoes_frete (N:M)</div>
+        <div class="entity-body">
+          <div class="entity-row"><span class="pk">PK id</span><span class="type">UUID</span></div>
+          <div class="entity-row"><span class="fk">FK solicitacao_id</span><span class="type">→ solic.</span></div>
+          <div class="entity-row"><span class="fk">FK transp._id</span><span class="type">→ transp.</span></div>
+          <div class="entity-row"><span>valor, status</span><span class="type">CHECK</span></div>
+          <div class="entity-row"><span style="color:var(--amber-400); font-size:10.5px;">UNIQUE(solic,transp)</span><span></span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="animate mt-4 card" style="background:rgba(96,165,250,0.05); border-color:rgba(96,165,250,0.15);">
+      <p class="text-xs" style="color:var(--slate-400);">
+        <span class="der" style="font-style:normal; color:var(--purple-400);">Roxo itálico</span> = Atributo derivado ·
+        <span style="color:var(--amber-400);">Amarelo</span> = Chave Primária / Tabela N:M ·
+        <span style="color:var(--blue-400);">Azul</span> = Chave Estrangeira
+      </p>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════
+       SLIDE 4 — ENTIDADES E MER
+  ═══════════════════════════════════════════════ -->
+  <section class="slide slide-dark" id="s4">
+    <div class="animate">
+      <p class="label">Slide 4 · Modelagem</p>
+      <h2>MER — Modelo Entidade-Relacionamento (3NF)</h2>
+    </div>
+
+    <div class="animate mt-4 grid-2 gap-4">
+      <div>
+        <p class="label" style="color:var(--blue-400);">8 Entidades principais</p>
+        <div style="display:flex; flex-direction:column; gap:6px; margin-top:8px;">
+          <div class="card flex items-center justify-between">
+            <span style="font-weight:700; font-size:13px;">👤 usuarios</span>
+            <span class="tag">Central</span>
+          </div>
+          <div class="card flex items-center justify-between">
+            <span style="font-weight:700; font-size:13px;">🌾 produtores</span>
+            <span class="tag-blue tag">1:1 ← usuarios</span>
+          </div>
+          <div class="card flex items-center justify-between">
+            <span style="font-weight:700; font-size:13px;">🏢 compradores</span>
+            <span class="tag-blue tag">1:1 ← usuarios</span>
+          </div>
+          <div class="card flex items-center justify-between">
+            <span style="font-weight:700; font-size:13px;">🚛 transportadoras</span>
+            <span class="tag-blue tag">1:1 ← usuarios</span>
+          </div>
+          <div class="card flex items-center justify-between">
+            <span style="font-weight:700; font-size:13px;">📋 anuncios</span>
+            <span class="tag">N:1 ← usuarios</span>
+          </div>
+          <div class="card flex items-center justify-between">
+            <span style="font-weight:700; font-size:13px;">💬 propostas</span>
+            <span class="tag">N:1 ← anuncios</span>
+          </div>
+          <div class="card flex items-center justify-between">
+            <span style="font-weight:700; font-size:13px;">📄 contratos</span>
+            <span class="tag">1:1 ← propostas</span>
+          </div>
+          <div class="card flex items-center justify-between">
+            <span style="font-weight:700; font-size:13px;">🚚 solicitacoes_frete</span>
+            <span class="tag">N:1 ← usuarios</span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <p class="label" style="color:var(--green-400);">Verificação da 3ª Forma Normal</p>
+        <div style="display:flex; flex-direction:column; gap:8px; margin-top:8px;">
+          <div class="card card-green">
+            <h3 style="font-size:13px; color:var(--green-400);">1FN — Atomicidade ✓</h3>
+            <p class="text-xs mt-2" style="color:var(--slate-400);">Todos os atributos são atômicos. Endereço separado em município + estado. Sem grupos repetidos.</p>
+          </div>
+          <div class="card card-green">
+            <h3 style="font-size:13px; color:var(--green-400);">2FN — Dependência Total ✓</h3>
+            <p class="text-xs mt-2" style="color:var(--slate-400);">PKs são UUIDs simples. Dados de perfil separados em tabelas próprias (produtores, compradores, transportadoras).</p>
+          </div>
+          <div class="card card-green">
+            <h3 style="font-size:13px; color:var(--green-400);">3FN — Sem Dependência Transitiva ✓</h3>
+            <p class="text-xs mt-2" style="color:var(--slate-400);">Dados de rastreabilidade isolados na tabela <em>rastreabilidade</em>. Fotos isoladas em <em>fotos_anuncio</em>. Log em <em>log_auditoria</em>.</p>
+          </div>
+          <div class="card card-amber">
+            <h3 style="font-size:13px; color:var(--amber-400);">Atributos derivados → computed</h3>
+            <p class="text-xs mt-2" style="color:var(--slate-400);"><code>preco_por_cabeca</code>: GENERATED ALWAYS AS STORED<br/><code>score_rastreabilidade</code>: calculado via TRIGGER AFTER</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════
+       SLIDE 5 — RELAÇÕES N:M
+  ═══════════════════════════════════════════════ -->
+  <section class="slide slide-alt" id="s5">
+    <div class="animate">
+      <p class="label">Slide 5 · Cardinalidade</p>
+      <h2>Relações N:M — Tabelas Associativas</h2>
+    </div>
+
+    <div class="animate mt-6 grid-2 gap-6">
+
+      <!-- favoritos -->
+      <div>
+        <div class="flex items-center gap-3 mb-4">
+          <span class="rel-badge rel-nm">N:M</span>
+          <span style="font-weight:700; font-size:16px; color:var(--amber-400);">⭐ favoritos</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="entity" style="flex:1;">
+            <div class="entity-header">usuarios</div>
+            <div class="entity-body">
+              <div class="entity-row"><span>1 usuário pode</span></div>
+              <div class="entity-row"><span>salvar N anúncios</span></div>
+            </div>
+          </div>
+          <div class="entity entity-nm" style="flex:1.2;">
+            <div class="entity-header">favoritos</div>
+            <div class="entity-body">
+              <div class="entity-row"><span class="fk">usuario_id</span><span class="type">FK</span></div>
+              <div class="entity-row"><span class="fk">anuncio_id</span><span class="type">FK</span></div>
+              <div class="entity-row"><span style="color:var(--amber-400); font-size:10px;">UNIQUE(usuario,anuncio)</span><span></span></div>
+            </div>
+          </div>
+          <div class="entity" style="border-color:var(--blue-400); flex:1;">
+            <div class="entity-header" style="background:#1e3a5f; color:var(--blue-200);">anuncios</div>
+            <div class="entity-body">
+              <div class="entity-row"><span>1 anúncio pode</span></div>
+              <div class="entity-row"><span>ser salvo por N</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="card card-amber mt-3">
+          <p class="text-sm">A constraint <code>UNIQUE(usuario_id, anuncio_id)</code> impede duplicação, funcionando como PK composta lógica. Resolve a multiplicidade N:M sem dados redundantes.</p>
+        </div>
+      </div>
+
+      <!-- cotacoes_frete -->
+      <div>
+        <div class="flex items-center gap-3 mb-4">
+          <span class="rel-badge rel-nm">N:M</span>
+          <span style="font-weight:700; font-size:16px; color:var(--amber-400);">💰 cotacoes_frete</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="entity" style="flex:1;">
+            <div class="entity-header">solicitacoes</div>
+            <div class="entity-body">
+              <div class="entity-row"><span>1 solicitação</span></div>
+              <div class="entity-row"><span>pode ter N cotas</span></div>
+            </div>
+          </div>
+          <div class="entity entity-nm" style="flex:1.2;">
+            <div class="entity-header">cotacoes_frete</div>
+            <div class="entity-body">
+              <div class="entity-row"><span class="fk">solicitacao_id</span><span class="type">FK</span></div>
+              <div class="entity-row"><span class="fk">transportadora_id</span><span class="type">FK</span></div>
+              <div class="entity-row"><span>valor, prazo_dias</span><span></span></div>
+              <div class="entity-row"><span style="color:var(--amber-400); font-size:10px;">UNIQUE(solic,transp)</span><span></span></div>
+            </div>
+          </div>
+          <div class="entity" style="flex:1;">
+            <div class="entity-header">transportadoras</div>
+            <div class="entity-body">
+              <div class="entity-row"><span>1 transp. pode</span></div>
+              <div class="entity-row"><span>cotar N solic.</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="card card-amber mt-3">
+          <p class="text-sm">Além das FKs, a tabela guarda atributos próprios da relação: <strong>valor</strong>, <strong>prazo_dias</strong>, <strong>status</strong> e <strong>observacoes</strong> — justificando a tabela associativa.</p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════
+       SLIDE 6 — ATRIBUTOS DERIVADOS
+  ═══════════════════════════════════════════════ -->
+  <section class="slide slide-dark" id="s6">
+    <div class="animate">
+      <p class="label">Slide 6 · Derived Attributes</p>
+      <h2>Atributos Derivados</h2>
+      <p class="subtitle mt-1">Valores calculados automaticamente pelo SGBD — nunca inseridos manualmente.</p>
+    </div>
+
+    <div class="animate mt-6 grid-2 gap-6">
+
+      <div>
+        <div class="flex items-center gap-2 mb-3">
+          <span class="tag-purple tag">GENERATED ALWAYS AS STORED</span>
+        </div>
+        <h3 style="color:var(--purple-400);">preco_por_cabeca</h3>
+        <p class="text-sm mt-2" style="color:var(--slate-400);">
+          Coluna virtual persistida no disco. Calculada automaticamente toda vez que <code>preco_total</code> ou <code>quantidade</code> são alterados.
+          Nunca pode ser inserida ou atualizada manualmente.
+        </p>
+        <div class="code-block mt-3">
+<span class="cm">-- Definição na CREATE TABLE</span>
+<span class="kw">preco_por_cabeca</span> <span class="ty">NUMERIC(14,2)</span>
+  <span class="kw">GENERATED ALWAYS AS</span>
+  (preco_total / quantidade)
+  <span class="kw">STORED</span>,
+
+<span class="cm">-- Exemplo com valores:</span>
+<span class="cm">-- preco_total: 190.000,00</span>
+<span class="cm">-- quantidade: 50</span>
+<span class="cm">-- preco_por_cabeca: 3.800,00 ←automático</span></div>
+        <div class="score-bar-wrap mt-3">
+          <div class="score-bar-fill" style="width:0%; background:linear-gradient(90deg, var(--purple-400), var(--blue-400));"></div>
+        </div>
+        <p class="text-xs mt-1" style="color:var(--slate-500);">PostgreSQL calcula e persiste a coluna automaticamente</p>
+      </div>
+
+      <div>
+        <div class="flex items-center gap-2 mb-3">
+          <span class="tag-amber tag">AFTER TRIGGER</span>
+        </div>
+        <h3 style="color:var(--amber-400);">score_rastreabilidade</h3>
+        <p class="text-sm mt-2" style="color:var(--slate-400);">
+          Score de 0–100% calculado pelo trigger <code>trg_score_rastreabilidade</code> a cada UPDATE na tabela <code>rastreabilidade</code>.
+          Conta os booleanos verdadeiros e multiplica por 12,5.
+        </p>
+        <div class="code-block mt-3">
+<span class="cm">-- 8 campos booleanos → score</span>
+score := (
+  <span class="num">CASE WHEN NEW.gta         THEN 1 ELSE 0 END</span> +
+  <span class="num">CASE WHEN NEW.brucela     THEN 1 ELSE 0 END</span> +
+  <span class="num">CASE WHEN NEW.tuberculose THEN 1 ELSE 0 END</span> +
+  <span class="num">CASE WHEN NEW.aftosa      THEN 1 ELSE 0 END</span> +
+  <span class="num">CASE WHEN NEW.raiva       THEN 1 ELSE 0 END</span> +
+  <span class="num">CASE WHEN NEW.carbunculo  THEN 1 ELSE 0 END</span> +
+  <span class="num">CASE WHEN NEW.dna         THEN 1 ELSE 0 END</span> +
+  <span class="num">CASE WHEN NEW.organico    THEN 1 ELSE 0 END</span>
+) * <span class="num">12.5</span>; <span class="cm">-- 8 docs × 12.5 = 100%</span></div>
+
+        <div class="mt-3 grid-4" style="gap:6px; text-align:center;">
+          <div class="card" style="padding:8px;">
+            <div style="font-size:18px; font-weight:900; color:var(--red-400);">0%</div>
+            <div class="text-xs opacity-60">Sem docs</div>
+          </div>
+          <div class="card" style="padding:8px;">
+            <div style="font-size:18px; font-weight:900; color:var(--amber-400);">37.5%</div>
+            <div class="text-xs opacity-60">3 docs</div>
+          </div>
+          <div class="card" style="padding:8px;">
+            <div style="font-size:18px; font-weight:900; color:var(--blue-400);">75%</div>
+            <div class="text-xs opacity-60">6 docs</div>
+          </div>
+          <div class="card" style="padding:8px;">
+            <div style="font-size:18px; font-weight:900; color:var(--green-400);">100%</div>
+            <div class="text-xs opacity-60">Completo</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════
+       SLIDE 7 — DDL
+  ═══════════════════════════════════════════════ -->
+  <section class="slide slide-alt" id="s7">
+    <div class="animate">
+      <p class="label">Slide 7 · DDL</p>
+      <h2>DDL — Data Definition Language</h2>
+      <p class="subtitle mt-1">Criação das tabelas com todas as constraints exigidas.</p>
+    </div>
+
+    <div class="animate mt-4 grid-2 gap-4">
+      <div>
+        <p class="label" style="color:var(--blue-400); margin-bottom:8px;">Tabela principal: anuncios</p>
+        <div class="code-block" style="font-size:11.5px;">
+<span class="kw">CREATE TABLE</span> <span class="fn">anuncios</span> (
+  id          <span class="ty">UUID</span> <span class="kw">PRIMARY KEY</span>
+              <span class="kw">DEFAULT</span> <span class="fn">uuid_generate_v4()</span>,
+  produtor_id <span class="ty">UUID</span> <span class="kw">NOT NULL</span>
+              <span class="kw">REFERENCES</span> <span class="fn">usuarios</span>(id),
+  titulo      <span class="ty">VARCHAR(200)</span> <span class="kw">NOT NULL</span>,
+  especie     <span class="ty">VARCHAR(30)</span>  <span class="kw">NOT NULL</span>
+              <span class="kw">CHECK</span> (especie <span class="kw">IN</span> (
+                <span class="str">'bovinos'</span>,<span class="str">'equinos'</span>,
+                <span class="str">'suinos'</span>,<span class="str">'aves'</span>,
+                <span class="str">'ovinos'</span>,<span class="str">'caprinos'</span>)),
+  quantidade  <span class="ty">INTEGER</span> <span class="kw">NOT NULL</span>
+              <span class="kw">CHECK</span> (quantidade > <span class="num">0</span>),
+  preco_total <span class="ty">NUMERIC(14,2)</span> <span class="kw">NOT NULL</span>
+              <span class="kw">CHECK</span> (preco_total > <span class="num">0</span>),
+  <span class="cm">-- ATRIBUTO DERIVADO (computed)</span>
+  preco_por_cabeca <span class="ty">NUMERIC(14,2)</span>
+    <span class="kw">GENERATED ALWAYS AS</span>
+    (preco_total / quantidade) <span class="kw">STORED</span>,
+  status      <span class="ty">VARCHAR(20)</span> <span class="kw">DEFAULT</span> <span class="str">'ativo'</span>
+              <span class="kw">CHECK</span> (status <span class="kw">IN</span> (
+                <span class="str">'ativo'</span>,<span class="str">'pausado'</span>,
+                <span class="str">'vendido'</span>,<span class="str">'cancelado'</span>))
+);</div>
+      </div>
+
+      <div>
+        <p class="label" style="color:var(--amber-400); margin-bottom:8px;">Constraints aplicadas</p>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <div class="card card-green">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="tag">PRIMARY KEY</span>
+            </div>
+            <p class="text-xs" style="color:var(--slate-400);">UUID gerado automaticamente em todas as 13 tabelas via <code>uuid_generate_v4()</code></p>
+          </div>
+          <div class="card card-blue">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="tag-blue tag">FOREIGN KEY</span>
+            </div>
+            <p class="text-xs" style="color:var(--slate-400);">Referências com <code>ON DELETE CASCADE</code> onde aplicável (fotos, rastreabilidade, favoritos)</p>
+          </div>
+          <div class="card card-amber">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="tag-amber tag">CHECK</span>
+            </div>
+            <p class="text-xs" style="color:var(--slate-400);">Domínios controlados: especie, sexo, status, perfil, modalidade_frete, score BETWEEN 0 AND 100</p>
+          </div>
+          <div class="card card-purple">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="tag-purple tag">UNIQUE</span>
+            </div>
+            <p class="text-xs" style="color:var(--slate-400);">email, documento, cnpj, car — campos únicos em usuários e empresas. Chave composta em favoritos e cotacoes_frete.</p>
+          </div>
+          <div class="card card-red">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="tag-red tag">NOT NULL</span>
+            </div>
+            <p class="text-xs" style="color:var(--slate-400);">Atributos obrigatórios em todas as tabelas. Ex: <code>nome</code>, <code>email</code>, <code>status</code>, timestamps.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════
+       SLIDE 8 — ALTER TABLE
+  ═══════════════════════════════════════════════ -->
+  <section class="slide slide-dark" id="s8">
+    <div class="animate">
+      <p class="label">Slide 8 · DDL Evolutivo</p>
+      <h2>ALTER TABLE — Evolução do Esquema</h2>
+      <p class="subtitle mt-1">6 exemplos de ALTER TABLE demonstrando add column, rename, constraints e índices.</p>
+    </div>
+
+    <div class="animate mt-4 grid-2 gap-4">
+      <div class="code-block" style="font-size:11.5px;">
+<span class="cm">-- ALTER 1: adicionar coluna</span>
+<span class="kw">ALTER TABLE</span> <span class="fn">anuncios</span>
+  <span class="kw">ADD COLUMN</span> destaque
+  <span class="ty">BOOLEAN</span> <span class="kw">NOT NULL DEFAULT</span> <span class="num">FALSE</span>;
+
+<span class="cm">-- ALTER 2: renomear coluna</span>
+<span class="kw">ALTER TABLE</span> <span class="fn">anuncios</span>
+  <span class="kw">RENAME COLUMN</span> municipio
+  <span class="kw">TO</span> cidade;
+
+<span class="cm">-- ALTER 3: reverter rename</span>
+<span class="kw">ALTER TABLE</span> <span class="fn">anuncios</span>
+  <span class="kw">RENAME COLUMN</span> cidade
+  <span class="kw">TO</span> municipio;
+
+<span class="cm">-- ALTER 4: nova constraint CHECK</span>
+<span class="kw">ALTER TABLE</span> <span class="fn">anuncios</span>
+  <span class="kw">ADD CONSTRAINT</span> chk_peso
+  <span class="kw">CHECK</span> (peso_medio_kg <span class="kw">BETWEEN</span>
+         <span class="num">1</span> <span class="kw">AND</span> <span class="num">2000</span>);</div>
+
+      <div class="code-block" style="font-size:11.5px;">
+<span class="cm">-- ALTER 5: índice de busca textual</span>
+<span class="kw">CREATE INDEX</span> idx_anuncio_titulo
+  <span class="kw">ON</span> <span class="fn">anuncios</span>
+  <span class="kw">USING</span> GIN (
+    <span class="fn">to_tsvector</span>(<span class="str">'portuguese'</span>, titulo)
+  );
+
+<span class="cm">-- ALTER 6: índice em chave estrangeira</span>
+<span class="kw">CREATE INDEX</span> idx_proposta_comprador
+  <span class="kw">ON</span> <span class="fn">propostas</span>(comprador_id);
+
+<span class="kw">CREATE INDEX</span> idx_proposta_anuncio
+  <span class="kw">ON</span> <span class="fn">propostas</span>(anuncio_id);
+
+<span class="cm">-- Índice para score de rastreabilidade</span>
+<span class="kw">CREATE INDEX</span> idx_anuncio_score
+  <span class="kw">ON</span> <span class="fn">anuncios</span>(score_rastreabilidade
+  <span class="kw">DESC</span>);</div>
+    </div>
+
+    <div class="animate mt-4 grid-3 gap-3">
+      <div class="card card-green flex items-center gap-3">
+        <div style="font-size:22px;">➕</div>
+        <div>
+          <p style="font-weight:700; font-size:13px;">ADD COLUMN</p>
+          <p class="text-xs" style="color:var(--slate-400);">Adiciona coluna com DEFAULT sem reescrever a tabela</p>
+        </div>
+      </div>
+      <div class="card card-blue flex items-center gap-3">
+        <div style="font-size:22px;">✏️</div>
+        <div>
+          <p style="font-weight:700; font-size:13px;">RENAME COLUMN</p>
+          <p class="text-xs" style="color:var(--slate-400);">Renomeia sem perda de dados ou reconstrução</p>
+        </div>
+      </div>
+      <div class="card card-amber flex items-center gap-3">
+        <div style="font-size:22px;">🔒</div>
+        <div>
+          <p style="font-weight:700; font-size:13px;">ADD CONSTRAINT</p>
+          <p class="text-xs" style="color:var(--slate-400);">Aplica validação retroativa via CHECK e INDEX</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════
+       SLIDE 9 — VIEWS
+  ═══════════════════════════════════════════════ -->
+  <section class="slide slide-alt" id="s9">
+    <div class="animate">
+      <p class="label">Slide 9 · Views</p>
+      <h2>Views — Segurança e Relatório</h2>
+    </div>
+
+    <div class="animate mt-4 grid-2 gap-6">
+
+      <div>
+        <div class="flex items-center gap-2 mb-3">
+          <span class="view-pill trigger-pill">View de Segurança</span>
+          <span style="font-weight:700; font-size:14px; color:var(--blue-400);">vw_catalogo_publico</span>
+        </div>
+        <p class="text-sm mb-3" style="color:var(--slate-400);">Expõe anúncios ativos sem revelar dados sensíveis do produtor (documento, telefone, endereço exato).</p>
+        <div class="code-block" style="font-size:11px;">
+<span class="kw">CREATE VIEW</span> <span class="fn">vw_catalogo_publico</span> <span class="kw">AS</span>
+<span class="kw">SELECT</span>
+  a.id,
+  a.titulo,
+  a.especie,
+  a.raca,
+  a.quantidade,
+  a.sexo,
+  a.peso_medio_kg,
+  a.preco_total,
+  a.preco_por_cabeca, <span class="cm">-- derivado</span>
+  <span class="cm">-- Faixa em vez do valor exato</span>
+  <span class="kw">CASE</span>
+    <span class="kw">WHEN</span> a.preco_total < <span class="num">50000</span>
+      <span class="kw">THEN</span> <span class="str">'Até R$ 50 mil'</span>
+    <span class="kw">WHEN</span> a.preco_total < <span class="num">200000</span>
+      <span class="kw">THEN</span> <span class="str">'R$ 50–200 mil'</span>
+    <span class="kw">ELSE</span> <span class="str">'Acima de R$ 200 mil'</span>
+  <span class="kw">END</span> <span class="kw">AS</span> faixa_preco,
+  a.municipio,   <span class="cm">-- sem endereço exato</span>
+  a.estado,
+  u.nome,        <span class="cm">-- sem CPF/CNPJ</span>
+  a.score_rastreabilidade,
+  a.criado_em
+<span class="kw">FROM</span> anuncios a
+<span class="kw">JOIN</span> usuarios u <span class="kw">ON</span> u.id = a.produtor_id
+<span class="kw">WHERE</span> a.status = <span class="str">'ativo'</span>;</div>
+      </div>
+
+      <div>
+        <div class="flex items-center gap-2 mb-3">
+          <span class="view-pill trigger-pill">View de Relatório</span>
+          <span style="font-weight:700; font-size:14px; color:var(--blue-400);">vw_relatorio_negociacoes</span>
+        </div>
+        <p class="text-sm mb-3" style="color:var(--slate-400);">Consolida propostas, contratos e usuários para relatório gerencial. Inclui <code>variacao_preco</code> calculada.</p>
+        <div class="code-block" style="font-size:11px;">
+<span class="kw">CREATE VIEW</span> <span class="fn">vw_relatorio_negociacoes</span> <span class="kw">AS</span>
+<span class="kw">SELECT</span>
+  p.id           <span class="kw">AS</span> proposta_id,
+  a.titulo       <span class="kw">AS</span> anuncio,
+  a.especie,
+  a.quantidade,
+  a.preco_total  <span class="kw">AS</span> preco_anunciado,
+  p.valor_proposto,
+  <span class="cm">-- Atributo derivado da VIEW</span>
+  <span class="kw">ROUND</span>(
+    (p.valor_proposto - a.preco_total)
+    / a.preco_total * <span class="num">100</span>, <span class="num">2</span>
+  )              <span class="kw">AS</span> variacao_preco,
+  p.status       <span class="kw">AS</span> status_proposta,
+  uc.nome        <span class="kw">AS</span> comprador,
+  uv.nome        <span class="kw">AS</span> vendedor,
+  c.status       <span class="kw">AS</span> status_contrato,
+  p.criado_em
+<span class="kw">FROM</span> propostas p
+<span class="kw">JOIN</span> anuncios a  <span class="kw">ON</span> a.id  = p.anuncio_id
+<span class="kw">JOIN</span> usuarios uc <span class="kw">ON</span> uc.id = p.comprador_id
+<span class="kw">JOIN</span> usuarios uv <span class="kw">ON</span> uv.id = p.vendedor_id
+<span class="kw">LEFT JOIN</span> contratos c
+              <span class="kw">ON</span> c.proposta_id = p.id;</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════
+       SLIDE 10 — TRIGGERS
+  ═══════════════════════════════════════════════ -->
+  <section class="slide slide-dark" id="s10">
+    <div class="animate">
+      <p class="label">Slide 10 · Triggers</p>
+      <h2>Triggers — BEFORE e AFTER</h2>
+    </div>
+
+    <div class="animate mt-4 grid-2 gap-4">
+
+      <div>
+        <div class="flex items-center gap-2 mb-3">
+          <span class="before-pill trigger-pill">⚡ BEFORE INSERT</span>
+          <span style="font-weight:700; font-size:13px; color:var(--amber-400);">trg_validar_proposta</span>
+        </div>
+        <p class="text-sm mb-3" style="color:var(--slate-400);">Executa ANTES do INSERT em propostas. Aborta a operação se as regras de negócio forem violadas.</p>
+        <div class="code-block" style="font-size:10.5px;">
+<span class="kw">CREATE FUNCTION</span> <span class="fn">fn_validar_proposta</span>()
+<span class="kw">RETURNS</span> TRIGGER <span class="kw">AS</span> $$
+<span class="kw">DECLARE</span>
+  v_status <span class="ty">VARCHAR</span>;
+  v_dup    <span class="ty">INT</span>;
+<span class="kw">BEGIN</span>
+  <span class="cm">-- Regra 1: anúncio deve estar ativo</span>
+  <span class="kw">SELECT</span> status <span class="kw">INTO</span> v_status
+  <span class="kw">FROM</span> anuncios <span class="kw">WHERE</span> id = NEW.anuncio_id;
+
+  <span class="kw">IF</span> v_status <> <span class="str">'ativo'</span> <span class="kw">THEN</span>
+    <span class="kw">RAISE EXCEPTION</span>
+      <span class="str">'Anúncio indisponível: %'</span>, v_status;
+  <span class="kw">END IF</span>;
+
+  <span class="cm">-- Regra 2: sem proposta duplicada</span>
+  <span class="kw">SELECT COUNT</span>(*) <span class="kw">INTO</span> v_dup
+  <span class="kw">FROM</span> propostas
+  <span class="kw">WHERE</span> anuncio_id  = NEW.anuncio_id
+    <span class="kw">AND</span> comprador_id = NEW.comprador_id
+    <span class="kw">AND</span> status = <span class="str">'aguardando'</span>;
+
+  <span class="kw">IF</span> v_dup > <span class="num">0</span> <span class="kw">THEN</span>
+    <span class="kw">RAISE EXCEPTION</span>
+      <span class="str">'Proposta duplicada pendente'</span>;
+  <span class="kw">END IF</span>;
+
+  <span class="cm">-- Regra 3: sem autoproposta</span>
+  <span class="kw">IF</span> NEW.comprador_id = NEW.vendedor_id <span class="kw">THEN</span>
+    <span class="kw">RAISE EXCEPTION</span>
+      <span class="str">'Comprador = vendedor'</span>;
+  <span class="kw">END IF</span>;
+
+  <span class="kw">RETURN</span> NEW; <span class="cm">-- permite o INSERT</span>
+<span class="kw">END</span>;
+$$ <span class="kw">LANGUAGE</span> plpgsql;</div>
+      </div>
+
+      <div>
+        <div class="flex items-center gap-2 mb-3">
+          <span class="after-pill trigger-pill">🔍 AFTER UPDATE</span>
+          <span style="font-weight:700; font-size:13px; color:var(--purple-400);">trg_audit_proposta_status</span>
+        </div>
+        <p class="text-sm mb-3" style="color:var(--slate-400);">Executa DEPOIS do UPDATE em propostas. Registra toda mudança de status na tabela de auditoria.</p>
+        <div class="code-block" style="font-size:10.5px;">
+<span class="kw">CREATE FUNCTION</span> <span class="fn">fn_audit_proposta</span>()
+<span class="kw">RETURNS</span> TRIGGER <span class="kw">AS</span> $$
+<span class="kw">BEGIN</span>
+  <span class="kw">IF</span> OLD.status <> NEW.status <span class="kw">THEN</span>
+    <span class="kw">INSERT INTO</span> <span class="fn">log_auditoria</span>
+      (tabela, operacao, registro_id,
+       status_anterior, status_novo,
+       alterado_em)
+    <span class="kw">VALUES</span> (
+      <span class="str">'propostas'</span>,
+      <span class="str">'UPDATE'</span>,
+      NEW.id::TEXT,
+      OLD.status,
+      NEW.status,
+      <span class="fn">NOW</span>()
+    );
+  <span class="kw">END IF</span>;
+  <span class="kw">RETURN</span> NEW;
+<span class="kw">END</span>;
+$$ <span class="kw">LANGUAGE</span> plpgsql;
+
+<span class="kw">CREATE TRIGGER</span> trg_audit_proposta_status
+<span class="kw">AFTER UPDATE ON</span> <span class="fn">propostas</span>
+<span class="kw">FOR EACH ROW EXECUTE FUNCTION</span>
+  <span class="fn">fn_audit_proposta</span>();</div>
+
+        <div class="card card-purple mt-3">
+          <p class="text-xs" style="color:var(--slate-300);">
+            <strong style="color:var(--purple-400);">Tabela log_auditoria:</strong>
+            bigserial PK · tabela · operacao · registro_id · status_anterior · status_novo · alterado_em
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════
+       SLIDE 11 — DML
+  ═══════════════════════════════════════════════ -->
+  <section class="slide slide-alt" id="s11">
+    <div class="animate">
+      <p class="label">Slide 11 · DML</p>
+      <h2>DML — Dados de Exemplo</h2>
+      <p class="subtitle mt-1">INSERTs com UUIDs fixos para consistência referencial entre tabelas.</p>
+    </div>
+
+    <div class="animate mt-4 grid-2 gap-4">
+      <div>
+        <p class="label" style="color:var(--green-400);">Inserções base</p>
+        <div class="code-block" style="font-size:11px;">
+<span class="cm">-- Usuário produtor</span>
+<span class="kw">INSERT INTO</span> <span class="fn">usuarios</span>
+  (id, nome, email, telefone,
+   documento, perfil)
+<span class="kw">VALUES</span> (
+  <span class="str">'a1b2c3d4-...'</span>,
+  <span class="str">'Fazenda Santa Cruz'</span>,
+  <span class="str">'fazenda@demo.com'</span>,
+  <span class="str">'(34)99900-0001'</span>,
+  <span class="str">'111.111.111-11'</span>,
+  <span class="str">'produtor'</span>
+);
+
+<span class="cm">-- Anúncio com atributo derivado</span>
+<span class="kw">INSERT INTO</span> <span class="fn">anuncios</span>
+  (produtor_id, titulo, especie,
+   quantidade, preco_total, ...)
+<span class="kw">VALUES</span> (
+  <span class="str">'a1b2c3d4-...'</span>,
+  <span class="str">'Nelore Precoce — 50 cabeças'</span>,
+  <span class="str">'bovinos'</span>,
+  <span class="num">50</span>,
+  <span class="num">190000.00</span>,
+  ...
+);
+<span class="cm">-- preco_por_cabeca = 3.800,00</span>
+<span class="cm">-- calculado automaticamente!</span></div>
+      </div>
+
+      <div>
+        <p class="label" style="color:var(--blue-400);">Relações N:M e proposta</p>
+        <div class="code-block" style="font-size:11px;">
+<span class="cm">-- Favorito (N:M)</span>
+<span class="kw">INSERT INTO</span> <span class="fn">favoritos</span>
+  (usuario_id, anuncio_id)
+<span class="kw">VALUES</span> (
+  <span class="str">'comprador-uuid'</span>,
+  <span class="str">'anuncio-uuid'</span>
+);
+<span class="cm">-- UNIQUE garante sem duplicata</span>
+
+<span class="cm">-- Proposta (trigger BEFORE valida)</span>
+<span class="kw">INSERT INTO</span> <span class="fn">propostas</span>
+  (anuncio_id, comprador_id,
+   vendedor_id, valor_proposto,
+   percentual_sinal, mensagem)
+<span class="kw">VALUES</span> (
+  <span class="str">'anuncio-uuid'</span>,
+  <span class="str">'comprador-uuid'</span>,
+  <span class="str">'produtor-uuid'</span>,
+  <span class="num">185000.00</span>,
+  <span class="num">10</span>,
+  <span class="str">'Interesse no lote completo'</span>
+);
+<span class="cm">-- BEFORE trigger verifica:</span>
+<span class="cm">-- anúncio ativo? sem duplicata?</span>
+<span class="cm">-- comprador ≠ vendedor?</span></div>
+
+        <div class="card card-green mt-3 flex items-center gap-3">
+          <span style="font-size:24px;">⚡</span>
+          <div>
+            <p style="font-weight:700; font-size:13px; color:var(--green-400);">Trigger ativado automaticamente</p>
+            <p class="text-xs" style="color:var(--slate-400);">O INSERT na proposta dispara <code>trg_validar_proposta</code> antes de persistir</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════
+       SLIDE 12 — QUERIES COMPLEXAS (parte 1)
+  ═══════════════════════════════════════════════ -->
+  <section class="slide slide-dark" id="s12">
+    <div class="animate">
+      <p class="label">Slide 12 · DQL</p>
+      <h2>Queries — JOINs e UNION</h2>
+    </div>
+
+    <div class="animate mt-4 grid-2 gap-4">
+      <div>
+        <p class="label" style="color:var(--blue-400);">INNER JOIN — Propostas com detalhes</p>
+        <div class="code-block" style="font-size:11px;">
+<span class="kw">SELECT</span>
+  p.id, a.titulo, a.especie,
+  uc.nome <span class="kw">AS</span> comprador,
+  uv.nome <span class="kw">AS</span> vendedor,
+  p.valor_proposto,
+  p.status
+<span class="kw">FROM</span>      propostas p
+<span class="kw">INNER JOIN</span> anuncios  a  <span class="kw">ON</span> a.id  = p.anuncio_id
+<span class="kw">INNER JOIN</span> usuarios  uc <span class="kw">ON</span> uc.id = p.comprador_id
+<span class="kw">INNER JOIN</span> usuarios  uv <span class="kw">ON</span> uv.id = p.vendedor_id
+<span class="kw">WHERE</span> p.status = <span class="str">'aceita'</span>
+<span class="kw">ORDER BY</span> p.criado_em <span class="kw">DESC</span>;</div>
+
+        <p class="label mt-3" style="color:var(--purple-400);">LEFT JOIN — Anúncios com/sem proposta</p>
+        <div class="code-block" style="font-size:11px;">
+<span class="kw">SELECT</span>
+  a.titulo, a.especie, a.preco_total,
+  <span class="fn">COUNT</span>(p.id)     <span class="kw">AS</span> total_propostas,
+  <span class="fn">MAX</span>(p.valor_proposto) <span class="kw">AS</span> melhor_oferta
+<span class="kw">FROM</span>      anuncios  a
+<span class="kw">LEFT JOIN</span> propostas p <span class="kw">ON</span> p.anuncio_id = a.id
+<span class="kw">WHERE</span> a.status = <span class="str">'ativo'</span>
+<span class="kw">GROUP BY</span> a.id, a.titulo, a.especie, a.preco_total
+<span class="kw">ORDER BY</span> total_propostas <span class="kw">DESC</span>;</div>
+      </div>
+
+      <div>
+        <p class="label" style="color:var(--amber-400);">RIGHT JOIN — Transportadoras e cotações</p>
+        <div class="code-block" style="font-size:11px;">
+<span class="kw">SELECT</span>
+  t.razao_social,
+  t.estado,
+  <span class="fn">COUNT</span>(c.id)       <span class="kw">AS</span> total_cotacoes,
+  <span class="fn">AVG</span>(c.valor)      <span class="kw">AS</span> valor_medio,
+  <span class="fn">MIN</span>(c.valor)      <span class="kw">AS</span> menor_cotacao
+<span class="kw">FROM</span>       cotacoes_frete   c
+<span class="kw">RIGHT JOIN</span> transportadoras  t
+         <span class="kw">ON</span> t.id = c.transportadora_id
+<span class="kw">GROUP BY</span> t.id, t.razao_social, t.estado
+<span class="kw">ORDER BY</span> total_cotacoes <span class="kw">DESC</span>;</div>
+
+        <p class="label mt-3" style="color:var(--green-400);">UNION — Participantes ativos da plataforma</p>
+        <div class="code-block" style="font-size:11px;">
+<span class="kw">SELECT</span> u.nome, <span class="str">'Produtor'</span>  <span class="kw">AS</span> papel,
+       p.nome_fazenda <span class="kw">AS</span> empresa
+<span class="kw">FROM</span> usuarios u
+<span class="kw">JOIN</span> produtores p <span class="kw">ON</span> p.usuario_id = u.id
+<span class="kw">WHERE</span> u.ativo = <span class="kw">TRUE</span>
+
+<span class="kw">UNION</span>
+
+<span class="kw">SELECT</span> u.nome, <span class="str">'Transportadora'</span> <span class="kw">AS</span> papel,
+       t.razao_social <span class="kw">AS</span> empresa
+<span class="kw">FROM</span> usuarios u
+<span class="kw">JOIN</span> transportadoras t <span class="kw">ON</span> t.usuario_id = u.id
+<span class="kw">WHERE</span> u.ativo = <span class="kw">TRUE</span>
+<span class="kw">ORDER BY</span> papel, nome;</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════
+       SLIDE 13 — QUERIES COMPLEXAS (parte 2)
+  ═══════════════════════════════════════════════ -->
+  <section class="slide slide-alt" id="s13">
+    <div class="animate">
+      <p class="label">Slide 13 · DQL Avançado</p>
+      <h2>Queries — EXISTS, IN e Ranking</h2>
+    </div>
+
+    <div class="animate mt-4 grid-2 gap-4">
+      <div>
+        <p class="label" style="color:var(--green-400);">EXISTS — Produtores com propostas aceitas</p>
+        <div class="code-block" style="font-size:11px;">
+<span class="kw">SELECT</span>
+  u.nome,
+  u.email,
+  p.nome_fazenda,
+  p.estado
+<span class="kw">FROM</span> usuarios u
+<span class="kw">JOIN</span> produtores p <span class="kw">ON</span> p.usuario_id = u.id
+<span class="kw">WHERE</span> <span class="kw">EXISTS</span> (
+  <span class="kw">SELECT</span> <span class="num">1</span>
+  <span class="kw">FROM</span>  propostas pr
+  <span class="kw">JOIN</span>  anuncios  a
+        <span class="kw">ON</span> a.id = pr.anuncio_id
+  <span class="kw">WHERE</span> a.produtor_id = u.id
+    <span class="kw">AND</span> pr.status = <span class="str">'aceita'</span>
+)
+<span class="kw">ORDER BY</span> u.nome;</div>
+
+        <p class="label mt-3" style="color:var(--amber-400);">IN — Anúncios favoritados por compradores VIP</p>
+        <div class="code-block" style="font-size:11px;">
+<span class="kw">SELECT</span>
+  a.titulo, a.especie,
+  a.preco_total,
+  a.score_rastreabilidade
+<span class="kw">FROM</span> anuncios a
+<span class="kw">WHERE</span> a.id <span class="kw">IN</span> (
+  <span class="kw">SELECT</span> f.anuncio_id
+  <span class="kw">FROM</span>  favoritos f
+  <span class="kw">JOIN</span>  usuarios  u
+        <span class="kw">ON</span> u.id = f.usuario_id
+  <span class="kw">WHERE</span> u.verificado = <span class="kw">TRUE</span>
+    <span class="kw">AND</span> u.perfil = <span class="str">'comprador'</span>
+)
+<span class="kw">ORDER BY</span> a.score_rastreabilidade <span class="kw">DESC</span>;</div>
+      </div>
+
+      <div>
+        <p class="label" style="color:var(--purple-400);">WINDOW FUNCTION — Ranking por espécie</p>
+        <div class="code-block" style="font-size:11px;">
+<span class="kw">SELECT</span>
+  a.especie,
+  a.titulo,
+  a.preco_total,
+  a.score_rastreabilidade,
+  <span class="kw">RANK</span>() <span class="kw">OVER</span> (
+    <span class="kw">PARTITION BY</span> a.especie
+    <span class="kw">ORDER BY</span>
+      a.score_rastreabilidade <span class="kw">DESC</span>,
+      a.criado_em <span class="kw">ASC</span>
+  ) <span class="kw">AS</span> posicao_ranking
+<span class="kw">FROM</span> anuncios a
+<span class="kw">WHERE</span> a.status = <span class="str">'ativo'</span>
+<span class="kw">ORDER BY</span> a.especie, posicao_ranking;</div>
+
+        <div class="card card-green mt-3">
+          <p class="label" style="margin-bottom:6px; color:var(--green-400);">Resumo das 7 queries</p>
+          <div style="display:flex; flex-direction:column; gap:4px;">
+            <div class="check-row">
+              <div class="check-icon ok">✓</div>
+              <span class="text-sm">INNER JOIN (3 tabelas — propostas + anúncios + usuários)</span>
+            </div>
+            <div class="check-row">
+              <div class="check-icon ok">✓</div>
+              <span class="text-sm">LEFT JOIN (anúncios com ou sem propostas + GROUP BY)</span>
+            </div>
+            <div class="check-row">
+              <div class="check-icon ok">✓</div>
+              <span class="text-sm">RIGHT JOIN (transportadoras + cotações)</span>
+            </div>
+            <div class="check-row">
+              <div class="check-icon ok">✓</div>
+              <span class="text-sm">UNION (produtores UNION transportadoras)</span>
+            </div>
+            <div class="check-row">
+              <div class="check-icon ok">✓</div>
+              <span class="text-sm">EXISTS (subquery correlacionada)</span>
+            </div>
+            <div class="check-row">
+              <div class="check-icon ok">✓</div>
+              <span class="text-sm">IN (subquery com join interno)</span>
+            </div>
+            <div class="check-row">
+              <div class="check-icon ok">✓</div>
+              <span class="text-sm">RANK() OVER PARTITION BY (window function)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════
+       SLIDE 14 — CHECKLIST E CONCLUSÃO
+  ═══════════════════════════════════════════════ -->
+  <section class="slide slide-dark" id="s14">
+    <div class="animate">
+      <p class="label">Slide 14 · Conclusão</p>
+      <h2>Requisitos atendidos</h2>
+    </div>
+
+    <div class="animate mt-4 grid-2 gap-6">
+
+      <div>
+        <p class="label mb-3" style="color:var(--green-400);">✅ Requisitos obrigatórios</p>
+
+        <div class="check-row">
+          <div class="check-icon ok">✓</div>
+          <div>
+            <p class="text-sm" style="font-weight:700;">DER com 6+ entidades e relação N:M</p>
+            <p class="text-xs opacity-60">8 entidades + 2 relações N:M (favoritos, cotacoes_frete)</p>
+          </div>
+        </div>
+        <div class="check-row">
+          <div class="check-icon ok">✓</div>
+          <div>
+            <p class="text-sm" style="font-weight:700;">MER na 3ª Forma Normal</p>
+            <p class="text-xs opacity-60">1FN, 2FN e 3FN verificados. Atributos derivados via computed/trigger.</p>
+          </div>
+        </div>
+        <div class="check-row">
+          <div class="check-icon ok">✓</div>
+          <div>
+            <p class="text-sm" style="font-weight:700;">DDL com todos os tipos de constraints</p>
+            <p class="text-xs opacity-60">PRIMARY KEY, FOREIGN KEY, CHECK, UNIQUE, NOT NULL, DEFAULT em 13 tabelas</p>
+          </div>
+        </div>
+        <div class="check-row">
+          <div class="check-icon ok">✓</div>
+          <div>
+            <p class="text-sm" style="font-weight:700;">ALTER TABLE e RENAME</p>
+            <p class="text-xs opacity-60">ADD COLUMN, RENAME COLUMN (ida e volta), ADD CONSTRAINT, CREATE INDEX</p>
+          </div>
+        </div>
+        <div class="check-row">
+          <div class="check-icon ok">✓</div>
+          <div>
+            <p class="text-sm" style="font-weight:700;">DML — INSERT com consistência referencial</p>
+            <p class="text-xs opacity-60">UUIDs fixos em todas as 13 tabelas. Dados coerentes.</p>
+          </div>
+        </div>
+        <div class="check-row">
+          <div class="check-icon ok">✓</div>
+          <div>
+            <p class="text-sm" style="font-weight:700;">JOINs: INNER, LEFT, RIGHT + UNION</p>
+            <p class="text-xs opacity-60">4 queries cobrindo todos os tipos de junção</p>
+          </div>
+        </div>
+        <div class="check-row">
+          <div class="check-icon ok">✓</div>
+          <div>
+            <p class="text-sm" style="font-weight:700;">Subqueries: EXISTS e IN</p>
+            <p class="text-xs opacity-60">2 queries com subquery correlacionada e não-correlacionada</p>
+          </div>
+        </div>
+        <div class="check-row">
+          <div class="check-icon ok">✓</div>
+          <div>
+            <p class="text-sm" style="font-weight:700;">2 Views (segurança + relatório)</p>
+            <p class="text-xs opacity-60">vw_catalogo_publico oculta dados sensíveis · vw_relatorio_negociacoes consolida negociações</p>
+          </div>
+        </div>
+        <div class="check-row">
+          <div class="check-icon ok">✓</div>
+          <div>
+            <p class="text-sm" style="font-weight:700;">2 Triggers: BEFORE (validação) + AFTER (auditoria)</p>
+            <p class="text-xs opacity-60">trg_validar_proposta (BEFORE INSERT) · trg_audit_proposta_status (AFTER UPDATE)</p>
+          </div>
+        </div>
+        <div class="check-row">
+          <div class="check-icon ok">✓</div>
+          <div>
+            <p class="text-sm" style="font-weight:700;">Script único comentado</p>
+            <p class="text-xs opacity-60">database/trabalho_final_agroplace.sql — seções 0 a 6 com comentários</p>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <p class="label mb-3" style="color:var(--amber-400);">📊 Estatísticas do projeto</p>
+
+        <div class="grid-2 gap-3 mb-4">
+          <div class="card" style="text-align:center; padding:16px 12px;">
+            <div class="counter" data-target="13" style="font-size:2.2rem;">0</div>
+            <div class="counter-label">Tabelas criadas</div>
+          </div>
+          <div class="card" style="text-align:center; padding:16px 12px;">
+            <div class="counter" data-target="2" style="font-size:2.2rem;">0</div>
+            <div class="counter-label">Tabelas N:M</div>
+          </div>
+          <div class="card" style="text-align:center; padding:16px 12px;">
+            <div class="counter" data-target="3" style="font-size:2.2rem;">0</div>
+            <div class="counter-label">Triggers PL/pgSQL</div>
+          </div>
+          <div class="card" style="text-align:center; padding:16px 12px;">
+            <div class="counter" data-target="2" style="font-size:2.2rem;">0</div>
+            <div class="counter-label">Views criadas</div>
+          </div>
+          <div class="card" style="text-align:center; padding:16px 12px;">
+            <div class="counter" data-target="7" style="font-size:2.2rem;">0</div>
+            <div class="counter-label">Queries complexas</div>
+          </div>
+          <div class="card" style="text-align:center; padding:16px 12px;">
+            <div class="counter" data-target="6" style="font-size:2.2rem;">0</div>
+            <div class="counter-label">ALTER TABLE</div>
+          </div>
+        </div>
+
+        <div class="card card-green" style="padding:20px;">
+          <div style="font-size:28px; margin-bottom:8px;">🎯</div>
+          <h3 style="color:var(--green-400); margin-bottom:6px;">Diferenciais técnicos</h3>
+          <div style="display:flex; flex-direction:column; gap:5px;">
+            <div class="flex items-center gap-2">
+              <span style="color:var(--green-400); font-size:12px;">▸</span>
+              <p class="text-sm">Atributo derivado via <code>GENERATED ALWAYS AS STORED</code></p>
+            </div>
+            <div class="flex items-center gap-2">
+              <span style="color:var(--green-400); font-size:12px;">▸</span>
+              <p class="text-sm">Score calculado por trigger AFTER em booleanos</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <span style="color:var(--green-400); font-size:12px;">▸</span>
+              <p class="text-sm">Tabela de auditoria com rastreio de mudanças</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <span style="color:var(--green-400); font-size:12px;">▸</span>
+              <p class="text-sm">Full-text search com GIN index e <code>to_tsvector</code></p>
+            </div>
+            <div class="flex items-center gap-2">
+              <span style="color:var(--green-400); font-size:12px;">▸</span>
+              <p class="text-sm">Schema isolado (<code>agroplace</code>) com extensões UUID</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card mt-3" style="padding:16px; text-align:center; border-color:rgba(74,222,128,0.25);">
+          <p style="font-size:22px; font-weight:900; color:var(--green-400);">Agro<span style="color:var(--white);">Place</span></p>
+          <p class="text-xs mt-1 opacity-60">database/trabalho_final_agroplace.sql</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div><!-- #slideshow -->
+
+<script>
+  const TOTAL = 14;
+  let current = 0;
+
+  const slides  = document.querySelectorAll('.slide');
+  const dots    = document.getElementById('dots');
+  const counter = document.getElementById('slide-counter');
+  const bar     = document.getElementById('progress-bar');
+  const btnPrev = document.getElementById('btn-prev');
+  const btnNext = document.getElementById('btn-next');
+
+  // Build dots
+  for (let i = 0; i < TOTAL; i++) {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === 0 ? ' active' : '');
+    d.addEventListener('click', () => goTo(i));
+    dots.appendChild(d);
+  }
+
+  function goTo(n, direction = 1) {
+    const prev = slides[current];
+    prev.classList.remove('active');
+    prev.classList.add(direction >= 0 ? 'exit-left' : 'exit-right');
+    setTimeout(() => prev.classList.remove('exit-left', 'exit-right'), 460);
+
+    current = n;
+    const next = slides[current];
+    next.classList.add('active');
+
+    // Update UI
+    counter.textContent = `${current + 1} / ${TOTAL}`;
+    bar.style.width = `${((current + 1) / TOTAL) * 100}%`;
+    btnPrev.disabled = current === 0;
+    btnNext.disabled = current === TOTAL - 1;
+    document.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('active', i === current));
+
+    // Animate counters on this slide
+    animateCounters(next);
+    // Animate score bars
+    next.querySelectorAll('.score-bar-fill').forEach(bar => {
+      bar.style.width = '100%';
+    });
+  }
+
+  function animateCounters(slide) {
+    slide.querySelectorAll('.counter[data-target]').forEach(el => {
+      const target = +el.dataset.target;
+      let v = 0;
+      const step = Math.max(1, Math.ceil(target / 20));
+      const id = setInterval(() => {
+        v = Math.min(v + step, target);
+        el.textContent = v;
+        if (v >= target) clearInterval(id);
+      }, 40);
+    });
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      if (current < TOTAL - 1) goTo(current + 1, 1);
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      if (current > 0) goTo(current - 1, -1);
+    }
+  });
+
+  btnNext.addEventListener('click', () => { if (current < TOTAL - 1) goTo(current + 1, 1); });
+  btnPrev.addEventListener('click', () => { if (current > 0) goTo(current - 1, -1); });
+
+  // Touch/swipe support
+  let touchX = 0;
+  document.addEventListener('touchstart', e => { touchX = e.touches[0].clientX; });
+  document.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - touchX;
+    if (Math.abs(dx) > 50) {
+      if (dx < 0 && current < TOTAL - 1) goTo(current + 1, 1);
+      else if (dx > 0 && current > 0) goTo(current - 1, -1);
+    }
+  });
+
+  // Init first slide
+  btnPrev.disabled = true;
+  animateCounters(slides[0]);
+</script>
+</body>
+</html>
