@@ -5,6 +5,7 @@ import Button from '../components/ui/Button'
 import { FEATURED_ANIMALS } from '../data/mockAnimals'
 import { formatCurrency } from '../utils/formatters'
 import { useApp } from '../context/AppContext'
+import { sendProposal as sendProposalAPI } from '../services/proposalsService'
 
 const animal = FEATURED_ANIMALS[0]
 
@@ -28,8 +29,21 @@ export default function CheckoutPage() {
     e.preventDefault()
     if (!form.date) { addToast('Informe a data de retirada desejada.', 'error'); return }
     setLoading(true)
-    await new Promise((r) => setTimeout(r, 800))
-    sendProposal({ animal: animal.title, animalId: animal.id, ...form, buyer: user?.name || 'Visitante' })
+    try {
+      // Tenta API real
+      await sendProposalAPI({
+        anuncio_id:      animal.id,
+        seller_id:       animal.seller || 'unknown',
+        price_offered:   +(form.price.replace(/\D/g, '') || 0) / 100,
+        signal_pct:      +(form.signal.replace('%', '') || 10),
+        withdrawal_date: form.date,
+        freight_mode:    form.freight,
+        message:         form.message,
+      })
+    } catch {
+      // Fallback local
+      sendProposal({ animal: animal.title, animalId: animal.id, ...form, buyer: user?.name || 'Visitante' })
+    }
     setLoading(false)
     setSubmitted(true)
   }

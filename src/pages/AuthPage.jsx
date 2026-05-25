@@ -26,7 +26,7 @@ const DEMO_HINT = {
 export default function AuthPage() {
   const [params, setParams]       = useSearchParams()
   const navigate                  = useNavigate()
-  const { login }                 = useApp()
+  const { login, register }       = useApp()
   const tab                       = params.get('tab') === 'register' ? 'register' : 'login'
   const selectedRole              = params.get('role') || 'vendedor'
 
@@ -73,13 +73,24 @@ export default function AuthPage() {
     if (!validate()) return
     setLoading(true)
     setServerError('')
-    await new Promise((r) => setTimeout(r, 700))
     try {
-      const user = login(form.email, form.password, selectedRole)
-      const dest = user.role === 'vendedor' ? '/vendedor' : user.role === 'transportadora' ? '/logistica' : '/comprador'
+      let u
+      if (tab === 'register') {
+        u = await register({ email: form.email, password: form.password, name: form.name, phone: form.phone, role: selectedRole })
+      } else {
+        u = await login(form.email, form.password, selectedRole)
+      }
+      const role = u?.user_metadata?.role || selectedRole
+      const dest = role === 'produtor' || role === 'vendedor' ? '/vendedor'
+                 : role === 'transportadora' ? '/logistica'
+                 : '/comprador'
       navigate(dest)
-    } catch {
-      setServerError('Erro ao processar. Tente novamente.')
+    } catch (err) {
+      const msg = err?.message || ''
+      if (msg.includes('Invalid login credentials')) setServerError('E-mail ou senha incorretos.')
+      else if (msg.includes('already registered'))   setServerError('Este e-mail já está cadastrado.')
+      else if (msg.includes('Email not confirmed'))  setServerError('Confirme seu e-mail antes de entrar.')
+      else setServerError(msg || 'Erro ao processar. Tente novamente.')
     } finally {
       setLoading(false)
     }

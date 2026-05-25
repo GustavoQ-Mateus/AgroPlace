@@ -7,6 +7,8 @@ import {
 } from 'lucide-react'
 import Button from '../components/ui/Button'
 import { useApp } from '../context/AppContext'
+import { createListing } from '../services/listingsService'
+import { uploadListingPhoto } from '../services/uploadsService'
 
 const SPECIES = [
   { id: 'bovinos',  label: 'Bovinos',  emoji: '🐄' },
@@ -49,7 +51,7 @@ const INITIAL = {
 
 export default function CreateListingPage() {
   const navigate = useNavigate()
-  const { addListing, user } = useApp()
+  const { addListing, addToast, user } = useApp()
   const [step, setStep] = useState(0)
   const [form, setForm] = useState(INITIAL)
   const [errors, setErrors] = useState({})
@@ -90,26 +92,59 @@ export default function CreateListingPage() {
 
   async function handleSubmit() {
     setSubmitting(true)
-    await new Promise((r) => setTimeout(r, 900))
-    const listing = {
-      title: `${form.breed} — ${form.quantity} cabeças`,
-      category: form.category,
-      breed: form.breed,
-      quantity: +form.quantity,
-      weight: form.weightMin ? +form.weightMin : 0,
-      price: +form.price.replace(/\D/g, '') || 0,
-      pricePerHead: form.pricePerHead ? +form.pricePerHead.replace(/\D/g, '') : null,
-      location: `${form.city}/${form.state}`,
-      seller: user?.name || 'Produtor',
-      sellerVerified: true,
-      traceability: [form.gta, form.brucela, form.tuberculose, form.aftosa].filter(Boolean).length * 25,
-      image: `https://images.unsplash.com/photo-1500595046743-cd271d694d30?w=800&q=80`,
-      tags: ['GTA', form.organico && 'Orgânico'].filter(Boolean),
-      status: 'Ativo',
+    try {
+      const priceTotal = +(form.price.replace(/\D/g, '') || '0') / 100
+      const priceHead  = form.pricePerHead ? +(form.pricePerHead.replace(/\D/g, '') || '0') / 100 : null
+
+      const listing = {
+        title:           `${form.breed} — ${form.quantity} cabeças`,
+        category:        form.category,
+        breed:           form.breed,
+        quantity:        +form.quantity,
+        weight_min_kg:   form.weightMin ? +form.weightMin : null,
+        weight_max_kg:   form.weightMax ? +form.weightMax : null,
+        sex:             form.sex?.toLowerCase().replace(' ', '_') || null,
+        price_total:     priceTotal,
+        price_per_head:  priceHead,
+        city:            form.city,
+        state:           form.state,
+        farm_name:       form.farm,
+        description:     form.description,
+        freight_mode:    form.freightIncluded || 'plataforma',
+        status:          'ativo',
+      }
+
+      const traceability = {
+        gta: form.gta, brucela: form.brucela, tuberculose: form.tuberculose,
+        aftosa: form.aftosa, raiva: form.raiva, carbunculo: form.carbunculo,
+        dna: form.dna, organico: form.organico,
+      }
+
+      try {
+        // Tenta usar Supabase real
+        await createListing({ listing, traceability, photos: form.photos })
+      } catch {
+        // Fallback local (sem Supabase configurado)
+        addListing({
+          ...listing,
+          price:         priceTotal,
+          pricePerHead:  priceHead,
+          location:      `${form.city}/${form.state}`,
+          seller:        user?.name || 'Produtor',
+          sellerVerified: true,
+          traceability:  [form.gta, form.brucela, form.tuberculose, form.aftosa].filter(Boolean).length * 25,
+          image:         form.photos[0] || 'https://images.unsplash.com/photo-1500595046743-cd271d694d30?w=800&q=80',
+          tags:          ['GTA', form.organico && 'Orgânico'].filter(Boolean),
+          status:        'Ativo',
+        })
+      }
+
+      navigate('/vendedor')
+    } catch (err) {
+      addToast(err?.message || 'Erro ao publicar anúncio.', 'error')
+    } finally {
+      setSubmitting(false)
     }
-    addListing(listing)
-    setSubmitting(false)
-    navigate('/vendedor')
   }
 
   const stepProgress = Math.round(((step) / STEPS.length) * 100)
