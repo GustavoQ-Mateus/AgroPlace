@@ -13,8 +13,41 @@
   }
 }
 
+@layer components {
+  .data-row {
+    @apply grid items-center gap-4 border-b border-slate-100 px-5 py-3.5 last:border-0 transition hover:bg-slate-50;
+  }
+
+  .panel {
+    @apply border border-slate-200 bg-white;
+  }
+
+  .panel-header {
+    @apply flex items-center justify-between border-b border-slate-200 bg-slate-50 px-5 py-3;
+  }
+
+  .section-label {
+    @apply text-xs font-bold uppercase tracking-wide text-emerald-600;
+  }
+
+  .prop-label {
+    @apply text-xs font-bold uppercase tracking-wide text-slate-400;
+  }
+}
+
 @layer utilities {
-  .glass {
-    @apply bg-white/70 backdrop-blur-md border border-white/20;
+  @keyframes slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-slide-up {
+    animation: slide-up 0.2s ease-out forwards;
   }
 }

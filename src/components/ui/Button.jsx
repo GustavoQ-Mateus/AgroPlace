@@ -40,7 +40,7 @@ const Button = forwardRef(function Button(
       whileTap={isDisabled ? {} : { scale: 0.98 }}
       transition={{ duration: 0.15 }}
       className={[
-        'inline-flex items-center justify-center gap-2 rounded-lg font-medium',
+        'inline-flex items-center justify-center gap-2 font-medium',
         'transition-colors duration-200 cursor-pointer whitespace-nowrap',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2',
         'disabled:cursor-not-allowed',

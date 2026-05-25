@@ -2,120 +2,223 @@ import { Link } from 'react-router-dom'
 import { CalendarCheck2, CheckCircle2, Clock3, FileText, MapPinned, PackageSearch, Search, Truck } from 'lucide-react'
 import Button from '../components/ui/Button'
 import { FEATURED_ANIMALS, ORDERS } from '../data/mockAnimals'
+import { useApp } from '../context/AppContext'
 
-const timeline = [
-  ['Proposta enviada', 'Hoje, 09:12', CheckCircle2, 'done'],
-  ['Aceite do vendedor', 'Aguardando retorno', Clock3, 'active'],
-  ['Contrato e sinal', 'Após aceite', FileText, 'idle'],
-  ['Frete e retirada', '7 a 12 de maio', Truck, 'idle'],
-]
+const stateStyle = {
+  done:   'bg-emerald-600 text-white border-emerald-600',
+  active: 'bg-amber-50 text-amber-700 border-amber-300',
+  idle:   'bg-white text-slate-400 border-slate-200',
+}
 
 export default function BuyerDashboard() {
-  return (
-    <section className="min-h-screen bg-slate-50 pt-24">
-      <div className="mx-auto max-w-7xl px-4 pb-16 sm:px-6 lg:px-8">
-        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="mb-2 text-sm font-bold uppercase tracking-wide text-emerald-600">Dashboard comprador</p>
-            <h1 className="max-w-[21rem] text-3xl font-black leading-tight text-emerald-950 sm:max-w-none sm:text-4xl">
-              Pedidos, buscas e documentos
-            </h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-              Acompanhe negociações, status de frete, documentos fiscais e lotes salvos.
-            </p>
-          </div>
-          <Link to="/catalogo">
-            <Button>
-              <Search size={17} />
-              Nova busca
-            </Button>
-          </Link>
-        </div>
+  const { proposals, savedAnimals, toggleSave, addToast } = useApp()
 
-        <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+  const allOrders = [
+    ...proposals.map((p) => ({
+      id: p.id,
+      animal: p.animal,
+      date: new Date(p.createdAt).toLocaleDateString('pt-BR'),
+      status: p.status,
+      amount: p.price,
+    })),
+    ...ORDERS,
+  ]
+
+  const timeline = [
+    ['Proposta enviada', proposals.length > 0 ? 'Enviada' : 'Aguardando', CheckCircle2, proposals.length > 0 ? 'done' : 'idle'],
+    ['Aceite do vendedor', 'Aguardando retorno', Clock3, proposals.length > 0 ? 'active' : 'idle'],
+    ['Contrato e sinal', 'Após aceite', FileText, 'idle'],
+    ['Frete e retirada', '7 a 12 de maio', Truck, 'idle'],
+  ]
+
+  return (
+    <section className="min-h-screen bg-slate-50 pt-14">
+      {/* Page header */}
+      <div className="border-b border-slate-200 bg-white">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col gap-4 py-6 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="section-label mb-1">Dashboard comprador</p>
+              <h1 className="text-2xl font-black text-emerald-950 sm:text-3xl">
+                Pedidos, buscas e documentos
+              </h1>
+              <p className="mt-1.5 text-sm leading-6 text-slate-600">
+                Acompanhe negociações, status de frete, documentos fiscais e lotes salvos.
+              </p>
+            </div>
+            <Link to="/catalogo">
+              <Button>
+                <Search size={15} />
+                Nova busca
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-7xl px-4 pb-16 pt-6 sm:px-6 lg:px-8">
+        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
           <div className="space-y-6">
-            <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-              <h2 className="mb-5 flex items-center gap-2 text-xl font-black text-emerald-950">
-                <PackageSearch className="text-emerald-700" size={22} />
-                Timeline da negociação
-              </h2>
-              <div className="grid gap-4 md:grid-cols-4">
+            {/* Timeline */}
+            <div className="border border-slate-200 bg-white">
+              <div className="panel-header">
+                <h2 className="flex items-center gap-2 font-black text-emerald-950">
+                  <PackageSearch className="text-emerald-700" size={17} />
+                  Timeline da negociação
+                </h2>
+                {proposals.length > 0 && (
+                  <span className="border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-bold text-amber-700">
+                    {proposals.length} proposta{proposals.length > 1 ? 's' : ''} ativa{proposals.length > 1 ? 's' : ''}
+                  </span>
+                )}
+              </div>
+              <div className="grid divide-y divide-slate-100 sm:grid-cols-4 sm:divide-x sm:divide-y-0">
                 {timeline.map(([title, date, Icon, state], index) => (
-                  <div className="relative rounded-lg border border-slate-200 bg-slate-50 p-4" key={title}>
-                    <div className={`mb-4 flex h-10 w-10 items-center justify-center rounded-lg ${state === 'done' ? 'bg-emerald-600 text-white' : state === 'active' ? 'bg-amber-100 text-amber-700' : 'bg-white text-slate-500'}`}>
-                      <Icon size={19} />
+                  <div className="px-5 py-4" key={title}>
+                    <div className="mb-3 flex items-center gap-2">
+                      <span className={`flex h-7 w-7 items-center justify-center border text-xs font-black ${stateStyle[state]}`}>
+                        {index + 1}
+                      </span>
+                      <Icon
+                        className={state === 'done' ? 'text-emerald-600' : state === 'active' ? 'text-amber-600' : 'text-slate-300'}
+                        size={15}
+                      />
                     </div>
-                    <p className="font-black text-emerald-950">{title}</p>
-                    <p className="mt-1 text-xs font-semibold text-slate-500">{date}</p>
-                    <span className="absolute right-3 top-3 text-xs font-black text-slate-300">0{index + 1}</span>
+                    <p className="font-bold text-emerald-950">{title}</p>
+                    <p className="mt-0.5 text-xs text-slate-500">{date}</p>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="rounded-lg border border-slate-200 bg-white shadow-sm">
-              <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-                <h2 className="font-black text-emerald-950">Pedidos recentes</h2>
-                <Button size="sm" variant="outline">
-                  Ver todos
-                </Button>
+            {/* Orders table */}
+            <div className="border border-slate-200 bg-white">
+              <div className="panel-header">
+                <h2 className="font-black text-emerald-950">
+                  Pedidos recentes
+                  <span className="ml-2 text-sm font-semibold text-slate-400">({allOrders.length})</span>
+                </h2>
+                <Button size="sm" variant="outline">Ver todos</Button>
+              </div>
+
+              <div className="hidden grid-cols-[auto_1fr_auto_auto] items-center gap-4 border-b border-slate-100 bg-slate-50 px-5 py-2.5 sm:grid">
+                <span className="prop-label">ID</span>
+                <span className="prop-label">Lote</span>
+                <span className="prop-label text-right">Valor</span>
+                <span />
+              </div>
+
+              <div className="divide-y divide-slate-100">
+                {allOrders.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <PackageSearch size={28} className="mb-3 text-slate-300" />
+                    <p className="font-semibold text-slate-500">Nenhum pedido ainda</p>
+                    <Link to="/catalogo" className="mt-3 text-sm font-bold text-emerald-700 hover:text-emerald-800">
+                      Explorar catálogo
+                    </Link>
+                  </div>
+                ) : (
+                  allOrders.map((order) => (
+                    <div className="grid items-center gap-4 px-5 py-4 sm:grid-cols-[auto_1fr_auto_auto]" key={order.id}>
+                      <div className="hidden sm:block">
+                        <p className="font-mono text-sm font-bold text-slate-500">{order.id}</p>
+                      </div>
+                      <div>
+                        <p className="font-bold text-emerald-950">{order.animal}</p>
+                        <p className="mt-0.5 text-xs text-slate-500">
+                          {order.date} ·{' '}
+                          <span className={`font-bold ${order.status === 'Aguardando' ? 'text-amber-600' : 'text-emerald-600'}`}>
+                            {order.status}
+                          </span>
+                        </p>
+                      </div>
+                      <span className="hidden text-right sm:block">
+                        <p className="font-black text-slate-800">{order.amount}</p>
+                      </span>
+                      <Button size="sm" variant="outline">Abrir</Button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Sidebar */}
+          <aside className="space-y-4">
+            {/* Upcoming actions */}
+            <div className="border border-slate-200 bg-white">
+              <div className="panel-header">
+                <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-600">
+                  <CalendarCheck2 size={14} className="text-emerald-700" />
+                  Próximas ações
+                </h2>
               </div>
               <div className="divide-y divide-slate-100">
-                {ORDERS.map((order) => (
-                  <div className="grid gap-3 px-5 py-4 sm:grid-cols-[1fr_auto]" key={order.id}>
+                {proposals.length > 0 ? (
+                  <div className="flex items-start justify-between px-4 py-3.5">
                     <div>
-                      <p className="font-black text-emerald-950">{order.id}</p>
-                      <p className="mt-1 text-sm font-semibold text-slate-700">{order.animal}</p>
-                      <p className="mt-1 text-xs text-slate-500">{order.date} · {order.status}</p>
+                      <p className="text-sm font-bold text-amber-700">Aguardar aceite do vendedor</p>
+                      <p className="mt-0.5 text-xs text-slate-500">{proposals[0].animal} · Enviado agora</p>
                     </div>
-                    <div className="flex items-center gap-3 sm:justify-end">
-                      <span className="font-black text-slate-800">{order.amount}</span>
-                      <Button size="sm" variant="outline">
-                        Abrir
-                      </Button>
+                    <Clock3 size={14} className="mt-0.5 text-amber-400" />
+                  </div>
+                ) : null}
+                {[
+                  ['Assinar contrato digital', 'Hoje até 18h', 'urgent'],
+                  ['Enviar comprovante do sinal', 'Após aceite', 'normal'],
+                  ['Confirmar janela de coleta', 'Até 06 mai', 'normal'],
+                ].map(([title, date, priority]) => (
+                  <div className="flex items-start justify-between px-4 py-3.5" key={title}>
+                    <div>
+                      <p className={`text-sm font-bold ${priority === 'urgent' ? 'text-red-700' : 'text-slate-800'}`}>
+                        {title}
+                      </p>
+                      <p className="mt-0.5 text-xs text-slate-500">{date}</p>
                     </div>
+                    <Clock3 size={14} className={priority === 'urgent' ? 'mt-0.5 text-red-400' : 'mt-0.5 text-slate-300'} />
                   </div>
                 ))}
               </div>
             </div>
-          </div>
 
-          <aside className="space-y-6">
-            <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-              <h2 className="mb-4 flex items-center gap-2 font-black text-emerald-950">
-                <CalendarCheck2 className="text-emerald-700" size={20} />
-                Próximas ações
-              </h2>
-              {[
-                ['Assinar contrato digital', 'Hoje até 18h'],
-                ['Enviar comprovante do sinal', 'Após aceite'],
-                ['Confirmar janela de coleta', 'Até 06 mai'],
-              ].map(([title, date]) => (
-                <div className="flex items-center justify-between border-b border-slate-100 py-3 last:border-0" key={title}>
-                  <div>
-                    <p className="text-sm font-bold text-slate-800">{title}</p>
-                    <p className="text-xs text-slate-500">{date}</p>
-                  </div>
-                  <Clock3 size={16} className="text-slate-400" />
-                </div>
-              ))}
-            </div>
-
-            <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-              <h2 className="mb-4 flex items-center gap-2 font-black text-emerald-950">
-                <MapPinned className="text-emerald-700" size={20} />
-                Lotes salvos
-              </h2>
-              <div className="space-y-3">
+            {/* Saved lots */}
+            <div className="border border-slate-200 bg-white">
+              <div className="panel-header">
+                <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-600">
+                  <MapPinned size={14} className="text-emerald-700" />
+                  Lotes salvos
+                </h2>
+                <span className="text-xs font-semibold text-slate-400">{savedAnimals.size} salvo{savedAnimals.size !== 1 ? 's' : ''}</span>
+              </div>
+              <div className="divide-y divide-slate-100">
                 {FEATURED_ANIMALS.slice(1, 4).map((animal) => (
-                  <Link className="flex gap-3 rounded-lg border border-slate-200 p-3 transition hover:border-emerald-200" key={animal.id} to={`/anuncio/${animal.id}`}>
-                    <img alt={animal.title} className="h-14 w-14 rounded-md object-cover" src={animal.image} />
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-black text-emerald-950">{animal.title}</p>
-                      <p className="mt-1 text-xs font-semibold text-slate-500">{animal.location}</p>
-                    </div>
-                  </Link>
+                  <div
+                    className="flex items-center gap-3 px-4 py-3.5 transition hover:bg-slate-50"
+                    key={animal.id}
+                  >
+                    <Link to={`/anuncio/${animal.id}`} className="flex flex-1 items-center gap-3 min-w-0">
+                      <img alt={animal.title} className="h-12 w-12 shrink-0 bg-slate-200 object-cover" src={animal.image} />
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-bold text-emerald-950">{animal.title}</p>
+                        <p className="mt-0.5 text-xs text-slate-500">{animal.location}</p>
+                      </div>
+                    </Link>
+                    <button
+                      onClick={() => toggleSave(animal.id)}
+                      className="shrink-0 text-xs font-bold text-slate-400 hover:text-red-500"
+                    >
+                      {savedAnimals.has(animal.id) ? '✕' : '♡'}
+                    </button>
+                  </div>
                 ))}
+                {savedAnimals.size === 0 && (
+                  <div className="px-4 py-6 text-center">
+                    <p className="text-sm text-slate-500">Nenhum lote salvo ainda.</p>
+                    <Link to="/catalogo" className="mt-2 block text-xs font-bold text-emerald-700">
+                      Explorar catálogo
+                    </Link>
+                  </div>
+                )}
               </div>
             </div>
           </aside>
