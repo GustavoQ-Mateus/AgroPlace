@@ -5,6 +5,8 @@ import br.com.agroplace.autenticacao.aplicacao.dto.RequisicaoEntrada;
 import br.com.agroplace.autenticacao.aplicacao.dto.RespostaAutenticacao;
 import br.com.agroplace.autenticacao.dominio.ContaUsuario;
 import br.com.agroplace.autenticacao.dominio.TipoConta;
+import br.com.agroplace.autenticacao.dominio.builder.ContaUsuarioConcretoBuilder;
+import br.com.agroplace.autenticacao.dominio.builder.DiretorContaUsuario;
 import br.com.agroplace.autenticacao.infra.RepositorioContaUsuario;
 import br.com.agroplace.compartilhado.seguranca.GeradorToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -36,7 +38,8 @@ public class ServicoAutenticacaoPadrao implements ServicoAutenticacao {
             throw new IllegalArgumentException("Nome da empresa obrigatório para este tipo de conta");
         }
         String nomeEmpresa = requisicao.tipoConta() == TipoConta.PRODUTOR ? null : requisicao.nomeEmpresa();
-        ContaUsuario conta = new ContaUsuario(
+        DiretorContaUsuario diretor = new DiretorContaUsuario(new ContaUsuarioConcretoBuilder());
+        ContaUsuario conta = diretor.construirConta(
                 requisicao.nome(),
                 requisicao.email(),
                 requisicao.telefone(),

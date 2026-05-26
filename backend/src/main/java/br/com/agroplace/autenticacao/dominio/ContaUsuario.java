@@ -1,5 +1,6 @@
 package br.com.agroplace.autenticacao.dominio;
 
+import br.com.agroplace.autenticacao.dominio.builder.ContaUsuarioConcretoBuilder;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -51,6 +52,16 @@ public class ContaUsuario {
     private LocalDateTime atualizadoEm;
 
     protected ContaUsuario() {
+    }
+
+    public ContaUsuario(ContaUsuarioConcretoBuilder b) {
+        this.nome = b.getNome();
+        this.email = b.getEmail();
+        this.telefone = b.getTelefone();
+        this.documento = b.getDocumento();
+        this.nomeEmpresa = b.getNomeEmpresa();
+        this.senhaHash = b.getSenhaHash();
+        this.tipoConta = b.getTipoConta();
     }
 
     public ContaUsuario(String nome, String email, String telefone, String documento, String nomeEmpresa, String senhaHash, TipoConta tipoConta) {
