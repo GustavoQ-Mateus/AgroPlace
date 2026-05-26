@@ -1,5 +1,6 @@
 package br.com.agroplace.anuncio.dominio;
 
+import br.com.agroplace.anuncio.dominio.builder.AnuncioConcretoBuilder;
 import br.com.agroplace.autenticacao.dominio.ContaUsuario;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -74,6 +75,21 @@ public class Anuncio {
     private LocalDateTime atualizadoEm;
 
     protected Anuncio() {}
+
+    public Anuncio(AnuncioConcretoBuilder b) {
+        this.conta = b.getConta();
+        this.titulo = b.getTitulo();
+        this.especie = b.getEspecie();
+        this.raca = b.getRaca();
+        this.quantidade = b.getQuantidade();
+        this.pesoMedioKg = b.getPesoMedioKg();
+        this.idadeMediaMeses = b.getIdadeMediaMeses();
+        this.sexo = b.getSexo();
+        this.precoUnitario = b.getPrecoUnitario();
+        this.cidade = b.getCidade();
+        this.estado = b.getEstado();
+        this.descricao = b.getDescricao();
+    }
 
     public Anuncio(ContaUsuario conta, String titulo, String especie, String raca,
             int quantidade, BigDecimal pesoMedioKg, Integer idadeMediaMeses, SexoAnimal sexo,

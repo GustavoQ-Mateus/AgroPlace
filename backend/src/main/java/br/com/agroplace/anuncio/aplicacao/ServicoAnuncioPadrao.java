@@ -4,6 +4,8 @@ import br.com.agroplace.anuncio.aplicacao.dto.RequisicaoAnuncio;
 import br.com.agroplace.anuncio.aplicacao.dto.RespostaAnuncio;
 import br.com.agroplace.anuncio.dominio.Anuncio;
 import br.com.agroplace.anuncio.dominio.StatusAnuncio;
+import br.com.agroplace.anuncio.dominio.builder.AnuncioConcretoBuilder;
+import br.com.agroplace.anuncio.dominio.builder.DiretorAnuncio;
 import br.com.agroplace.anuncio.infra.RepositorioAnuncio;
 import br.com.agroplace.autenticacao.dominio.ContaUsuario;
 import br.com.agroplace.autenticacao.infra.RepositorioContaUsuario;
@@ -28,9 +30,8 @@ public class ServicoAnuncioPadrao implements ServicoAnuncio {
     @Transactional
     public RespostaAnuncio criar(String emailConta, RequisicaoAnuncio req) {
         ContaUsuario conta = buscarConta(emailConta);
-        Anuncio anuncio = new Anuncio(conta, req.titulo(), req.especie(), req.raca(),
-                req.quantidade(), req.pesoMedioKg(), req.idadeMediaMeses(), req.sexo(),
-                req.precoUnitario(), req.cidade(), req.estado(), req.descricao());
+        DiretorAnuncio diretor = new DiretorAnuncio(new AnuncioConcretoBuilder());
+        Anuncio anuncio = diretor.construirDaRequisicao(conta, req);
         return RespostaAnuncio.de(repoAnuncio.save(anuncio));
     }
 
