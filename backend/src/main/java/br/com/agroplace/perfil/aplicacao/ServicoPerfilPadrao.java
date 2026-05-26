@@ -8,6 +8,12 @@ import br.com.agroplace.perfil.aplicacao.dto.RequisicaoPerfilTransportadora;
 import br.com.agroplace.perfil.dominio.PerfilCorporativa;
 import br.com.agroplace.perfil.dominio.PerfilProdutor;
 import br.com.agroplace.perfil.dominio.PerfilTransportadora;
+import br.com.agroplace.perfil.dominio.builder.DiretorPerfilCorporativa;
+import br.com.agroplace.perfil.dominio.builder.DiretorPerfilProdutor;
+import br.com.agroplace.perfil.dominio.builder.DiretorPerfilTransportadora;
+import br.com.agroplace.perfil.dominio.builder.PerfilCorporativaConcretoBuilder;
+import br.com.agroplace.perfil.dominio.builder.PerfilProdutorConcretoBuilder;
+import br.com.agroplace.perfil.dominio.builder.PerfilTransportadoraConcretoBuilder;
 import br.com.agroplace.perfil.infra.RepositorioPerfilCorporativa;
 import br.com.agroplace.perfil.infra.RepositorioPerfilProdutor;
 import br.com.agroplace.perfil.infra.RepositorioPerfilTransportadora;
@@ -37,11 +43,9 @@ public class ServicoPerfilPadrao implements ServicoPerfil {
     @Transactional
     public Map<String, Object> salvarProdutor(String emailConta, RequisicaoPerfilProdutor req) {
         ContaUsuario conta = buscarConta(emailConta);
+        DiretorPerfilProdutor diretor = new DiretorPerfilProdutor(new PerfilProdutorConcretoBuilder());
         PerfilProdutor perfil = repoProdutor.findByContaId(conta.getId())
-                .orElseGet(() -> new PerfilProdutor(conta, req.nomePropriedade(),
-                        req.documentoRural(), req.inscricaoEstadual(), req.car(),
-                        req.areaHectares(), req.cep(), req.endereco(),
-                        req.cidade(), req.estado(), req.descricao()));
+                .orElseGet(() -> diretor.construirDaRequisicao(conta, req));
 
         if (perfil.getId() != null) {
             perfil.atualizar(req.nomePropriedade(), req.documentoRural(), req.inscricaoEstadual(),
@@ -63,11 +67,9 @@ public class ServicoPerfilPadrao implements ServicoPerfil {
             throw new IllegalArgumentException("CNPJ já cadastrado");
         }
 
+        DiretorPerfilCorporativa diretor = new DiretorPerfilCorporativa(new PerfilCorporativaConcretoBuilder());
         PerfilCorporativa perfil = repoCorporativa.findByContaId(conta.getId())
-                .orElseGet(() -> new PerfilCorporativa(conta, req.razaoSocial(), req.nomeFantasia(),
-                        req.cnpj(), req.inscricaoEstadual(), req.segmento(),
-                        req.responsavelComercial(), req.telefoneComercial(), req.site(),
-                        req.cep(), req.endereco(), req.cidade(), req.estado(), req.descricao()));
+                .orElseGet(() -> diretor.construirDaRequisicao(conta, req));
 
         if (perfil.getId() != null) {
             perfil.atualizar(req.razaoSocial(), req.nomeFantasia(), req.inscricaoEstadual(),
@@ -82,12 +84,9 @@ public class ServicoPerfilPadrao implements ServicoPerfil {
     @Transactional
     public Map<String, Object> salvarTransportadora(String emailConta, RequisicaoPerfilTransportadora req) {
         ContaUsuario conta = buscarConta(emailConta);
+        DiretorPerfilTransportadora diretor = new DiretorPerfilTransportadora(new PerfilTransportadoraConcretoBuilder());
         PerfilTransportadora perfil = repoTransportadora.findByContaId(conta.getId())
-                .orElseGet(() -> new PerfilTransportadora(conta, req.razaoSocial(), req.nomeFantasia(),
-                        req.cnpj(), req.rntrc(), req.inscricaoEstadual(), req.responsavelOperacional(),
-                        req.telefoneOperacional(), req.tiposVeiculo(), req.capacidadeCargaKg(),
-                        req.possuiTransporteVivo(), req.cep(), req.endereco(),
-                        req.cidade(), req.estado(), req.descricao()));
+                .orElseGet(() -> diretor.construirDaRequisicao(conta, req));
 
         if (perfil.getId() != null) {
             perfil.atualizar(req.razaoSocial(), req.nomeFantasia(), req.rntrc(),

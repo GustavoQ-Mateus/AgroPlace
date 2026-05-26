@@ -1,6 +1,7 @@
 package br.com.agroplace.perfil.dominio;
 
 import br.com.agroplace.autenticacao.dominio.ContaUsuario;
+import br.com.agroplace.perfil.dominio.builder.PerfilTransportadoraConcretoBuilder;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -79,6 +80,25 @@ public class PerfilTransportadora {
     private LocalDateTime atualizadoEm;
 
     protected PerfilTransportadora() {}
+
+    public PerfilTransportadora(PerfilTransportadoraConcretoBuilder b) {
+        this.conta = b.getConta();
+        this.razaoSocial = b.getRazaoSocial();
+        this.nomeFantasia = b.getNomeFantasia();
+        this.cnpj = b.getCnpj();
+        this.rntrc = b.getRntrc();
+        this.inscricaoEstadual = b.getInscricaoEstadual();
+        this.responsavelOperacional = b.getResponsavelOperacional();
+        this.telefoneOperacional = b.getTelefoneOperacional();
+        this.tiposVeiculo = b.getTiposVeiculo();
+        this.capacidadeCargaKg = b.getCapacidadeCargaKg();
+        this.possuiTransporteVivo = b.isPossuiTransporteVivo();
+        this.cep = b.getCep();
+        this.endereco = b.getEndereco();
+        this.cidade = b.getCidade();
+        this.estado = b.getEstado();
+        this.descricao = b.getDescricao();
+    }
 
     public PerfilTransportadora(ContaUsuario conta, String razaoSocial, String nomeFantasia,
             String cnpj, String rntrc, String inscricaoEstadual, String responsavelOperacional,

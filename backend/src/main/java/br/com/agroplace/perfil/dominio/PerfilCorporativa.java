@@ -1,6 +1,7 @@
 package br.com.agroplace.perfil.dominio;
 
 import br.com.agroplace.autenticacao.dominio.ContaUsuario;
+import br.com.agroplace.perfil.dominio.builder.PerfilCorporativaConcretoBuilder;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -72,6 +73,23 @@ public class PerfilCorporativa {
     private LocalDateTime atualizadoEm;
 
     protected PerfilCorporativa() {}
+
+    public PerfilCorporativa(PerfilCorporativaConcretoBuilder b) {
+        this.conta = b.getConta();
+        this.razaoSocial = b.getRazaoSocial();
+        this.nomeFantasia = b.getNomeFantasia();
+        this.cnpj = b.getCnpj();
+        this.inscricaoEstadual = b.getInscricaoEstadual();
+        this.segmento = b.getSegmento();
+        this.responsavelComercial = b.getResponsavelComercial();
+        this.telefoneComercial = b.getTelefoneComercial();
+        this.site = b.getSite();
+        this.cep = b.getCep();
+        this.endereco = b.getEndereco();
+        this.cidade = b.getCidade();
+        this.estado = b.getEstado();
+        this.descricao = b.getDescricao();
+    }
 
     public PerfilCorporativa(ContaUsuario conta, String razaoSocial, String nomeFantasia,
             String cnpj, String inscricaoEstadual, String segmento, String responsavelComercial,

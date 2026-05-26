@@ -1,6 +1,7 @@
 package br.com.agroplace.perfil.dominio;
 
 import br.com.agroplace.autenticacao.dominio.ContaUsuario;
+import br.com.agroplace.perfil.dominio.builder.PerfilProdutorConcretoBuilder;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -64,6 +65,20 @@ public class PerfilProdutor {
     private LocalDateTime atualizadoEm;
 
     protected PerfilProdutor() {}
+
+    public PerfilProdutor(PerfilProdutorConcretoBuilder b) {
+        this.conta = b.getConta();
+        this.nomePropriedade = b.getNomePropriedade();
+        this.documentoRural = b.getDocumentoRural();
+        this.inscricaoEstadual = b.getInscricaoEstadual();
+        this.car = b.getCar();
+        this.areaHectares = b.getAreaHectares();
+        this.cep = b.getCep();
+        this.endereco = b.getEndereco();
+        this.cidade = b.getCidade();
+        this.estado = b.getEstado();
+        this.descricao = b.getDescricao();
+    }
 
     public PerfilProdutor(ContaUsuario conta, String nomePropriedade, String documentoRural,
             String inscricaoEstadual, String car, BigDecimal areaHectares, String cep,
