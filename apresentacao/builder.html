@@ -3,13 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Padrao Builder — AgroPlace</title>
+<title>Padrão Builder — AgroPlace</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
     --bg: #0a0f1e;
     --green: #22c55e;
+    --red: #ef4444;
     --text: #f0f4f8;
     --muted: #64748b;
     --border: #1e2d40;
@@ -32,7 +33,7 @@
   #pdf-btn:hover { background: var(--green); color: var(--bg); }
 
   #deck { width: 100%; height: 100%; position: relative; }
-  .slide { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; padding: 56px 96px 80px; opacity: 0; pointer-events: none; transition: opacity 0.5s ease; }
+  .slide { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; padding: 52px 96px 76px; opacity: 0; pointer-events: none; transition: opacity 0.5s ease; }
   .slide.active { opacity: 1; pointer-events: all; }
   .slide.active .anim-child { animation: fadeUp 0.6s ease both; }
   .slide.active .anim-child:nth-child(2) { animation-delay: 0.08s; }
@@ -45,6 +46,7 @@
   @keyframes fadeUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
 
   .label { font-size: 11px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; color: var(--green); margin-bottom: 14px; }
+  .label-red { font-size: 11px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; color: var(--red); margin-bottom: 14px; }
   .title-xl { font-size: clamp(32px, 4.5vw, 58px); font-weight: 700; line-height: 1.05; letter-spacing: -0.02em; }
   .title-lg { font-size: clamp(22px, 3vw, 40px); font-weight: 700; line-height: 1.1; letter-spacing: -0.02em; }
   .body { font-size: 15px; line-height: 1.7; color: #cbd5e1; }
@@ -54,8 +56,6 @@
 
   .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
   .col-divider { border-left: 1px solid var(--divider); padding-left: 48px; }
-  .ba-grid { display: grid; grid-template-columns: 1fr 1px 1fr; gap: 48px; align-items: start; }
-  .ba-divider-line { background: var(--divider); }
 
   .def-list { display: flex; flex-direction: column; }
   .def-row { display: grid; grid-template-columns: 210px 1fr; padding: 14px 0; border-bottom: 1px solid var(--divider); align-items: start; }
@@ -65,19 +65,21 @@
 
   .data-table { width: 100%; border-collapse: collapse; }
   .data-table th { font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); padding: 12px 0; border-bottom: 1px solid var(--green); text-align: left; }
-  .data-table td { padding: 13px 0; border-bottom: 1px solid var(--divider); font-size: 13px; color: #cbd5e1; vertical-align: top; padding-right: 16px; }
-  .data-table td:first-child { color: var(--text); font-weight: 600; width: 80px; }
+  .data-table td { padding: 12px 0; border-bottom: 1px solid var(--divider); font-size: 13px; color: #cbd5e1; vertical-align: top; padding-right: 16px; }
+  .data-table td:first-child { color: var(--text); font-weight: 600; width: 90px; }
 
   .accent-block { border-left: 3px solid var(--green); padding-left: 18px; margin: 12px 0; }
+  .accent-block-red { border-left: 3px solid var(--red); padding-left: 18px; margin: 12px 0; }
   .cover-tag { font-size: 11px; letter-spacing: 0.25em; text-transform: uppercase; color: var(--green); margin-bottom: 32px; display: flex; align-items: center; gap: 12px; }
   .cover-tag::after { content: ''; flex: 1; height: 1px; background: var(--green); opacity: 0.3; }
 
   pre {
-    background: var(--code-bg); padding: 18px 22px; overflow-x: auto;
-    border-left: 3px solid var(--green); font-size: 12px;
+    background: var(--code-bg); padding: 16px 20px; overflow-x: auto;
+    border-left: 3px solid var(--green); font-size: 11.5px;
     font-family: 'Courier New', monospace; line-height: 1.75; color: #e2e8f0;
-    margin: 12px 0;
+    margin: 10px 0; position: relative;
   }
+  pre.bad { border-left-color: var(--red); }
   code { font-family: 'Courier New', monospace; font-size: 12px; color: #94a3b8; }
   .kw { color: #569cd6; }
   .fn { color: #dcdcaa; }
@@ -85,6 +87,7 @@
   .cm { color: #6a9955; }
   .tp { color: #4ec9b0; }
   .ann { color: #c586c0; }
+  .err { color: #ef4444; font-weight: 700; }
 
   .participant-list { display: flex; flex-direction: column; gap: 0; margin: 16px 0; }
   .participant { display: grid; grid-template-columns: 180px 1fr; padding: 14px 0; border-bottom: 1px solid var(--divider); align-items: start; }
@@ -92,14 +95,14 @@
   .p-name { font-size: 14px; font-weight: 700; color: var(--green); font-family: 'Courier New', monospace; }
   .p-desc { font-size: 13px; color: #94a3b8; }
 
-  .flow-text { font-size: 15px; color: var(--muted); letter-spacing: 0.05em; margin-top: 20px; }
+  .flow-text { font-size: 14px; color: var(--muted); letter-spacing: 0.04em; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
   .flow-text span { color: var(--text); font-weight: 600; }
   .flow-text .arr { color: var(--green); }
 
-  .bad-item { padding: 10px 0; border-bottom: 1px solid var(--divider); font-size: 13px; color: #94a3b8; }
-  .good-item { padding: 10px 0; border-bottom: 1px solid var(--divider); font-size: 13px; color: #94a3b8; }
-  .bad-item::before { content: '- '; color: #ef4444; }
-  .good-item::before { content: '+ '; color: var(--green); }
+  .bad-item { padding: 9px 0; border-bottom: 1px solid var(--divider); font-size: 13px; color: #94a3b8; }
+  .good-item { padding: 9px 0; border-bottom: 1px solid var(--divider); font-size: 13px; color: #94a3b8; }
+  .bad-item::before { content: '✕  '; color: #ef4444; font-weight: 700; }
+  .good-item::before { content: '✓  '; color: var(--green); font-weight: 700; }
 
   .gof-pattern { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0; }
   .gof-item { padding: 16px 0; border-right: 1px solid var(--divider); padding-right: 20px; padding-left: 20px; }
@@ -116,11 +119,19 @@
   .usecase-desc { font-size: 12px; color: #94a3b8; line-height: 1.5; }
 
   .vantagem-list { display: flex; flex-direction: column; gap: 0; }
-  .vantagem-item { display: grid; grid-template-columns: 40px 1fr; padding: 14px 0; border-bottom: 1px solid var(--divider); align-items: start; gap: 12px; }
+  .vantagem-item { display: grid; grid-template-columns: 28px 1fr; padding: 12px 0; border-bottom: 1px solid var(--divider); align-items: start; gap: 10px; }
   .vantagem-item:first-child { border-top: 1px solid var(--divider); }
-  .vantagem-icon { font-size: 18px; padding-top: 2px; }
-  .vantagem-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+  .vantagem-icon { font-size: 14px; padding-top: 2px; color: var(--green); }
+  .vantagem-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
   .vantagem-desc { font-size: 12px; color: #94a3b8; line-height: 1.5; }
+
+  /* Annotation callouts */
+  .callout { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 0.05em; padding: 2px 8px; border-radius: 2px; text-transform: uppercase; vertical-align: middle; margin-left: 4px; }
+  .callout-red { background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); }
+  .callout-green { background: rgba(34,197,94,0.15); color: #22c55e; border: 1px solid rgba(34,197,94,0.3); }
+
+  .code-header { font-size: 10px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); padding: 6px 20px; background: #080c14; border-left: 3px solid var(--green); border-bottom: 1px solid var(--divider); }
+  .code-header.bad { border-left-color: var(--red); }
 
   /* ===================== PRINT / PDF ===================== */
   @media print {
@@ -142,20 +153,20 @@
 
   <!-- SLIDE 1: CAPA -->
   <section class="slide active" data-slide="0">
-    <div class="anim-child cover-tag">Seminario &nbsp;&middot;&nbsp; Padroes de Projeto &nbsp;&middot;&nbsp; UNIFOR 2026.1</div>
-    <div class="anim-child title-xl">Padrao Builder</div>
+    <div class="anim-child cover-tag">Seminário &nbsp;·&nbsp; Padrões de Projeto &nbsp;·&nbsp; UNIFOR 2026.1</div>
+    <div class="anim-child title-xl">Padrão Builder</div>
     <hr class="rule-green anim-child" style="margin-top:24px;">
     <p class="body anim-child" style="max-width:640px; margin-top:20px; font-style:italic; color:#94a3b8;">
-      "Separar a construcao de um objeto complexo da sua representacao, de modo que o mesmo processo de construcao possa criar diferentes representacoes."
+      "Separar a construção de um objeto complexo da sua representação, de modo que o mesmo processo de construção possa criar diferentes representações."
     </p>
     <p class="body-sm anim-child" style="margin-top:8px;">— Gang of Four, <em>Design Patterns: Elements of Reusable Object-Oriented Software</em>, 1994</p>
     <div class="anim-child" style="margin-top:44px; display:flex; gap:56px;">
       <div>
         <div class="label">Disciplina</div>
-        <div class="body-sm">Padroes de Projeto de Software</div>
+        <div class="body-sm">Padrões de Projeto de Software</div>
       </div>
       <div>
-        <div class="label">Instituicao</div>
+        <div class="label">Instituição</div>
         <div class="body-sm">Universidade de Fortaleza — UNIFOR</div>
       </div>
       <div>
@@ -169,37 +180,37 @@
     </div>
   </section>
 
-  <!-- SLIDE 2: O QUE E O BUILDER -->
+  <!-- SLIDE 2: O QUE É O BUILDER -->
   <section class="slide" data-slide="1">
-    <div class="anim-child label">Sobre o Padrao</div>
-    <div class="anim-child title-lg" style="margin-bottom:28px;">O que e o Padrao Builder?</div>
+    <div class="anim-child label">Sobre o Padrão</div>
+    <div class="anim-child title-lg" style="margin-bottom:24px;">O que é o Padrão Builder?</div>
     <div class="anim-child two-col" style="gap:64px; align-items:start;">
       <div>
-        <div class="accent-block" style="margin-bottom:24px;">
+        <div class="accent-block" style="margin-bottom:22px;">
           <p class="body-sm">
-            <strong style="color:var(--text);">Classificacao GoF:</strong> Padrao Criacional (Creational Pattern)<br>
+            <strong style="color:var(--text);">Classificação GoF:</strong> Padrão Criacional (Creational Pattern)<br>
             Definido originalmente por Gamma, Helm, Johnson e Vlissides no livro de 1994.
           </p>
         </div>
-        <p class="body-sm" style="margin-bottom:18px;">
-          O Builder separa o <strong style="color:var(--text);">algoritmo de construcao</strong> de um objeto complexo da sua <strong style="color:var(--text);">representacao final</strong>. Isso permite que o mesmo processo de montagem produza diferentes variantes de um objeto.
+        <p class="body-sm" style="margin-bottom:16px;">
+          O Builder separa o <strong style="color:var(--text);">algoritmo de construção</strong> de um objeto complexo da sua <strong style="color:var(--text);">representação final</strong>. Isso permite que o mesmo processo de montagem produza diferentes variantes de um objeto.
         </p>
-        <p class="body-sm" style="margin-bottom:18px;">
-          Diferente de uma <em>factory</em> que entrega o objeto em uma unica chamada, o Builder monta o objeto <strong style="color:var(--text);">passo a passo</strong> — cada etapa configura uma parte especifica — e so materializa o produto ao chamar <code>construir()</code>.
+        <p class="body-sm" style="margin-bottom:16px;">
+          Diferente de uma <em>factory</em> que entrega o objeto em uma única chamada, o Builder monta o objeto <strong style="color:var(--text);">passo a passo</strong> — cada etapa configura uma parte específica — e só materializa o produto ao chamar <code>construir()</code>.
         </p>
-        <div class="gof-pattern" style="grid-template-columns: repeat(3,1fr); margin-top:20px;">
+        <div class="gof-pattern" style="grid-template-columns:repeat(3,1fr); margin-top:20px;">
           <div class="gof-item" style="padding-left:0; padding-right:16px;">
             <div style="font-size:11px; font-weight:700; color:var(--muted); margin-bottom:6px;">Factory Method</div>
-            <div style="font-size:11px; color:#64748b;">Delega a criacao a subclasses</div>
+            <div style="font-size:11px; color:#64748b;">Delega a criação a subclasses</div>
           </div>
           <div class="gof-item selected" style="padding:12px 16px;">
             <div style="font-size:11px; font-weight:700; color:var(--green); margin-bottom:6px;">Builder</div>
             <div style="font-size:11px; color:#94a3b8;">Monta passo a passo</div>
-            <div style="font-size:10px; color:var(--green); margin-top:4px;">nosso foco</div>
+            <div style="font-size:10px; color:var(--green); margin-top:4px;">← nosso foco</div>
           </div>
           <div class="gof-item" style="border-right:none; padding-left:16px;">
             <div style="font-size:11px; font-weight:700; color:var(--muted); margin-bottom:6px;">Abstract Factory</div>
-            <div style="font-size:11px; color:#64748b;">Familias de objetos</div>
+            <div style="font-size:11px; color:#64748b;">Famílias de objetos</div>
           </div>
         </div>
       </div>
@@ -208,19 +219,19 @@
         <div class="participant-list">
           <div class="participant">
             <div class="p-name">Builder</div>
-            <div class="p-desc">Interface que declara os metodos de configuracao para cada parte do produto. Define o contrato de construcao.</div>
+            <div class="p-desc">Interface que declara os métodos de configuração para cada parte do produto. Define o contrato de construção.</div>
           </div>
           <div class="participant">
             <div class="p-name">ConcreteBuilder</div>
-            <div class="p-desc">Implementa a interface Builder, acumula o estado interno e executa validacoes em <code>construir()</code>.</div>
+            <div class="p-desc">Implementa a interface Builder, acumula o estado interno e executa validações em <code>construir()</code>.</div>
           </div>
           <div class="participant">
             <div class="p-name">Director</div>
-            <div class="p-desc">Orquestra a sequencia de chamadas ao Builder. Conhece o processo, nao o produto resultante.</div>
+            <div class="p-desc">Orquestra a sequência de chamadas ao Builder. Conhece o processo, não o produto resultante.</div>
           </div>
           <div class="participant">
             <div class="p-name">Product</div>
-            <div class="p-desc">O objeto complexo sendo construido. Seu construtor e restrito — so pode ser criado via Builder.</div>
+            <div class="p-desc">O objeto complexo sendo construído. Seu construtor é restrito — só pode ser criado via Builder.</div>
           </div>
         </div>
       </div>
@@ -230,31 +241,31 @@
   <!-- SLIDE 3: CASOS DE USO -->
   <section class="slide" data-slide="2">
     <div class="anim-child label">Quando Aplicar</div>
-    <div class="anim-child title-lg" style="margin-bottom:28px;">Casos de uso do Padrao Builder</div>
-    <div class="anim-child usecase-grid" style="margin-bottom:28px;">
+    <div class="anim-child title-lg" style="margin-bottom:26px;">Casos de uso do Padrão Builder</div>
+    <div class="anim-child usecase-grid" style="margin-bottom:26px;">
       <div class="usecase-item">
         <div class="usecase-num">01</div>
-        <div class="usecase-title">Objetos com muitos parametros</div>
-        <div class="usecase-desc">Quando um objeto exige 5 ou mais parametros no construtor, o Builder substitui a lista confusa por uma API fluente e nomeada.</div>
+        <div class="usecase-title">Objetos com muitos parâmetros</div>
+        <div class="usecase-desc">Quando um objeto exige 5 ou mais parâmetros no construtor, o Builder substitui a lista confusa por uma API fluente e nomeada.</div>
       </div>
       <div class="usecase-item">
         <div class="usecase-num">02</div>
-        <div class="usecase-title">Parametros opcionais</div>
-        <div class="usecase-desc">Evita passagem explicita de <code>null</code> para campos opcionais. Apenas os metodos necessarios sao chamados.</div>
+        <div class="usecase-title">Parâmetros opcionais</div>
+        <div class="usecase-desc">Evita a passagem explícita de <code>null</code> para campos opcionais. Apenas os métodos necessários são chamados.</div>
       </div>
       <div class="usecase-item">
         <div class="usecase-num">03</div>
-        <div class="usecase-title">Validacao centralizada</div>
-        <div class="usecase-desc">O metodo <code>construir()</code> e o unico ponto de validacao — garante que nenhum objeto invalido seja criado.</div>
+        <div class="usecase-title">Validação centralizada</div>
+        <div class="usecase-desc">O método <code>construir()</code> é o único ponto de validação — garante que nenhum objeto inválido seja criado antes da persistência.</div>
       </div>
       <div class="usecase-item">
         <div class="usecase-num">04</div>
-        <div class="usecase-title">Multiplas representacoes</div>
-        <div class="usecase-desc">O mesmo Diretor pode usar diferentes ConcreteBuilders para produzir variantes do mesmo tipo de produto.</div>
+        <div class="usecase-title">Múltiplas representações</div>
+        <div class="usecase-desc">O mesmo Director pode usar diferentes ConcreteBuilders para produzir variantes do mesmo tipo de produto sem alterar o processo.</div>
       </div>
     </div>
     <hr class="rule anim-child">
-    <div class="anim-child" style="display:flex; gap:40px; margin-top:16px;">
+    <div class="anim-child" style="display:flex; gap:48px; margin-top:16px;">
       <div>
         <div class="label" style="margin-bottom:8px; font-size:10px;">Exemplos no ecossistema Java</div>
         <p class="body-sm"><code>StringBuilder</code> &nbsp;·&nbsp; <code>HttpClient.newBuilder()</code> &nbsp;·&nbsp; <code>Stream.builder()</code> &nbsp;·&nbsp; <code>Locale.Builder</code></p>
@@ -266,193 +277,211 @@
     </div>
   </section>
 
-  <!-- SLIDE 4: O PROBLEMA -->
+  <!-- SLIDE 4: O PROBLEMA — CÓDIGO SEM BUILDER -->
   <section class="slide" data-slide="3">
-    <div class="anim-child label">O Problema</div>
-    <div class="anim-child title-lg" style="margin-bottom:24px;">Anti-padrao: telescoping constructor</div>
+    <div class="anim-child label-red">O Problema</div>
+    <div class="anim-child title-lg" style="margin-bottom:20px;">Código <em>sem</em> Builder — o anti-padrão no AgroPlace</div>
     <div class="anim-child two-col" style="gap:48px; align-items:start;">
       <div>
-        <p class="body-sm" style="margin-bottom:14px;">No AgroPlace, a entidade <code>Anuncio</code> exige <strong style="color:var(--text);">12 parametros</strong>. Sem Builder, o codigo ficaria assim:</p>
-        <pre><span class="cm">// ANTI-PADRAO — construtor telescopico</span>
-<span class="kw">new</span> <span class="tp">Anuncio</span>(
-  conta,
-  <span class="str">"Lote Nelore Macho"</span>,   <span class="cm">// titulo</span>
-  <span class="str">"BOVINO"</span>,              <span class="cm">// especie</span>
-  <span class="str">"Nelore"</span>,              <span class="cm">// raca</span>
-  <span class="tp">50</span>,                    <span class="cm">// quantidade</span>
-  <span class="kw">new</span> <span class="tp">BigDecimal</span>(<span class="str">"420.00"</span>), <span class="cm">// peso</span>
-  <span class="tp">24</span>,                    <span class="cm">// idadeMeses</span>
-  <span class="tp">SexoAnimal.MACHO</span>,
-  <span class="kw">new</span> <span class="tp">BigDecimal</span>(<span class="str">"3800.00"</span>), <span class="cm">// preco</span>
-  <span class="str">"Sobral"</span>,
-  <span class="str">"CE"</span>,
-  <span class="str">"Animais vacinados, GTA inclusa"</span>
-);</pre>
+        <p class="body-sm" style="margin-bottom:10px;">Como ficaria a entidade <code>Anuncio</code> e sua criação <strong style="color:#ef4444;">sem o padrão Builder</strong>:</p>
+        <div class="code-header bad">Anuncio.java — construtor telescópico</div>
+        <pre class="bad"><span class="kw">public class</span> <span class="tp">Anuncio</span> {
+
+  <span class="kw">public</span> <span class="fn">Anuncio</span>( <span class="err">// ← construtor público, 12 parâmetros</span>
+      <span class="tp">ContaUsuario</span> conta,
+      <span class="tp">String</span> titulo,
+      <span class="tp">String</span> especie,
+      <span class="tp">String</span> raca,       <span class="err">// ← opcional, mas obrigatório aqui</span>
+      <span class="kw">int</span> quantidade,
+      <span class="tp">BigDecimal</span> pesoMedioKg,
+      <span class="tp">Integer</span> idadeMediaMeses,
+      <span class="tp">SexoAnimal</span> sexo,
+      <span class="tp">BigDecimal</span> precoUnitario,
+      <span class="tp">String</span> cidade,
+      <span class="tp">String</span> estado,
+      <span class="tp">String</span> descricao) {  <span class="err">// ← opcional, mas obrigatório</span>
+    <span class="kw">this</span>.conta = conta;
+    <span class="cm">// ... 11 atribuições sem nenhuma validação</span>
+  }
+}</pre>
       </div>
       <div class="col-divider">
-        <p class="body-sm" style="margin-bottom:16px;">Problemas concretos desta abordagem no sistema:</p>
-        <div class="def-list">
-          <div class="def-row" style="grid-template-columns:150px 1fr;">
-            <div class="def-term" style="color:#ef4444;">Ilegibilidade</div>
-            <div class="def-desc">Parametro 5 e quantidade ou peso? Sem IDE, impossivel saber a ordem.</div>
-          </div>
-          <div class="def-row" style="grid-template-columns:150px 1fr;">
-            <div class="def-term" style="color:#ef4444;">Sem validacao</div>
-            <div class="def-desc">Nenhum ponto central para checar se <code>preco > 0</code> ou se <code>estado</code> tem exatamente 2 caracteres antes de persistir.</div>
-          </div>
-          <div class="def-row" style="grid-template-columns:150px 1fr;">
-            <div class="def-term" style="color:#ef4444;">Acoplamento</div>
-            <div class="def-desc">Qualquer adicao de campo exige atualizar toda chamada. No AgroPlace ha 3 módulos com objetos de 7 a 14 campos.</div>
-          </div>
-          <div class="def-row" style="grid-template-columns:150px 1fr;">
-            <div class="def-term" style="color:#ef4444;">Campos opcionais</div>
-            <div class="def-desc">Campos como <code>raca</code> e <code>descricao</code> forcam <code>null</code> explicito na assinatura do construtor.</div>
-          </div>
-          <div class="def-row" style="grid-template-columns:150px 1fr;">
-            <div class="def-term" style="color:#ef4444;">Objeto invalido</div>
-            <div class="def-desc">Um <code>Anuncio</code> com preco negativo ou estado vazio pode chegar ao <code>repositorio.save()</code> sem nenhuma barreira.</div>
-          </div>
+        <p class="body-sm" style="margin-bottom:10px;">Uso no serviço de aplicação — <strong style="color:#ef4444;">ilegível e inseguro</strong>:</p>
+        <div class="code-header bad">ServicoAnuncioPadrao.java — sem Builder</div>
+        <pre class="bad"><span class="tp">Anuncio</span> anuncio = <span class="kw">new</span> <span class="tp">Anuncio</span>(
+  conta,
+  req.<span class="fn">titulo</span>(),
+  req.<span class="fn">especie</span>(),
+  req.<span class="fn">raca</span>(),      <span class="err">// ← pode ser null?</span>
+  req.<span class="fn">quantidade</span>(), <span class="err">// ← parâmetro 5 ou 6?</span>
+  req.<span class="fn">pesoMedioKg</span>(),
+  req.<span class="fn">idadeMediaMeses</span>(),
+  req.<span class="fn">sexo</span>(),
+  req.<span class="fn">precoUnitario</span>(), <span class="err">// ← e se vier negativo?</span>
+  req.<span class="fn">cidade</span>(),
+  req.<span class="fn">estado</span>(),   <span class="err">// ← e se tiver 3 chars?</span>
+  req.<span class="fn">descricao</span>()
+); <span class="err">// ← zero validação antes do save()</span>
+
+repositorio.<span class="fn">save</span>(anuncio); <span class="err">// ← objeto pode ser inválido</span></pre>
+        <div style="margin-top:12px;">
+          <div class="bad-item">Ordem dos 12 parâmetros causa bugs silenciosos</div>
+          <div class="bad-item">Campos opcionais forçam <code>null</code> explícito na chamada</div>
+          <div class="bad-item">Nenhuma validação — objeto inválido chega ao banco</div>
+          <div class="bad-item">Construtor público expõe a criação a qualquer código</div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- SLIDE 5: A SOLUCAO NO AGROPLACE -->
+  <!-- SLIDE 5: A SOLUÇÃO — CÓDIGO COM BUILDER -->
   <section class="slide" data-slide="4">
-    <div class="anim-child label">A Solucao — AgroPlace</div>
-    <div class="anim-child title-lg" style="margin-bottom:24px;">Builder em 3 modulos do backend</div>
-    <div class="anim-child" style="display:grid; grid-template-columns:1fr 1px 1.6fr; gap:40px; align-items:start;">
+    <div class="anim-child label">A Solução</div>
+    <div class="anim-child title-lg" style="margin-bottom:20px;">Código <em>com</em> Builder — como o AgroPlace resolve</div>
+    <div class="anim-child two-col" style="gap:48px; align-items:start;">
       <div>
-        <div class="label" style="margin-bottom:12px;">Modulos com Builder</div>
-        <div class="def-list">
-          <div class="def-row" style="grid-template-columns:1fr; padding:14px 0;">
-            <div class="def-term" style="color:var(--green); font-size:13px;">autenticacao</div>
-            <div class="def-desc" style="margin-top:4px;"><code>ContaUsuario</code> — 7 campos (nome, email, telefone, documento, nomeEmpresa, senhaHash, tipoConta)</div>
-          </div>
-          <div class="def-row" style="grid-template-columns:1fr; padding:14px 0;">
-            <div class="def-term" style="color:var(--green); font-size:13px;">anuncio</div>
-            <div class="def-desc" style="margin-top:4px;"><code>Anuncio</code> — 12 campos (especie, raca, peso, idade, sexo, quantidade, preco, cidade, estado...)</div>
-          </div>
-          <div class="def-row" style="grid-template-columns:1fr; padding:14px 0;">
-            <div class="def-term" style="color:var(--green); font-size:13px;">perfil</div>
-            <div class="def-desc" style="margin-top:4px;"><code>PerfilProdutor</code>, <code>PerfilTransportadora</code> e <code>PerfilCorporativa</code> — 3 builders distintos para 3 tipos de usuario</div>
-          </div>
-        </div>
-        <div style="margin-top:20px; display:grid; grid-template-columns:1fr 1fr; gap:0;">
-          <div style="padding:12px 12px 12px 0; border-right:1px solid var(--divider); border-bottom:1px solid var(--divider);">
-            <div style="font-size:24px; font-weight:800; color:var(--green);">15</div>
-            <div class="body-sm">arquivos Builder</div>
-          </div>
-          <div style="padding:12px; border-bottom:1px solid var(--divider);">
-            <div style="font-size:24px; font-weight:800; color:var(--green);">5</div>
-            <div class="body-sm">interfaces Builder</div>
-          </div>
-          <div style="padding:12px 12px 12px 0; border-right:1px solid var(--divider);">
-            <div style="font-size:24px; font-weight:800; color:var(--green);">5</div>
-            <div class="body-sm">ConcreteBuilders</div>
-          </div>
-          <div style="padding:12px;">
-            <div style="font-size:24px; font-weight:800; color:var(--green);">5</div>
-            <div class="body-sm">Directors</div>
-          </div>
-        </div>
+        <p class="body-sm" style="margin-bottom:10px;"><strong style="color:var(--green);">ConcreteBuilder</strong> — acumula campos e valida tudo antes de criar o objeto:</p>
+        <div class="code-header">AnuncioConcretoBuilder.java — construir() + validar()</div>
+        <pre><span class="ann">@Override</span>
+<span class="kw">public</span> <span class="tp">Anuncio</span> <span class="fn">construir</span>() {
+  <span class="fn">validar</span>(); <span class="cm">// ← único ponto de validação</span>
+  <span class="kw">return new</span> <span class="tp">Anuncio</span>(<span class="kw">this</span>); <span class="cm">// construtor package-private</span>
+}
+
+<span class="kw">private void</span> <span class="fn">validar</span>() {
+  <span class="kw">if</span> (conta == <span class="kw">null</span>)
+    <span class="kw">throw new</span> <span class="tp">IllegalStateException</span>(<span class="str">"Conta obrigatória"</span>);
+  <span class="kw">if</span> (titulo == <span class="kw">null</span> || titulo.<span class="fn">isBlank</span>())
+    <span class="kw">throw new</span> <span class="tp">IllegalStateException</span>(<span class="str">"Título obrigatório"</span>);
+  <span class="kw">if</span> (quantidade &lt; <span class="tp">1</span>)
+    <span class="kw">throw new</span> <span class="tp">IllegalStateException</span>(<span class="str">"Mínimo 1 animal"</span>);
+  <span class="kw">if</span> (precoUnitario.<span class="fn">compareTo</span>(<span class="tp">BigDecimal</span>.<span class="tp">ZERO</span>) &lt;= <span class="tp">0</span>)
+    <span class="kw">throw new</span> <span class="tp">IllegalStateException</span>(<span class="str">"Preço deve ser positivo"</span>);
+  <span class="kw">if</span> (estado.<span class="fn">length</span>() != <span class="tp">2</span>)
+    <span class="kw">throw new</span> <span class="tp">IllegalStateException</span>(<span class="str">"Estado inválido (use UF)"</span>);
+}</pre>
       </div>
-      <div style="background:var(--divider);"></div>
-      <div>
-        <div class="label" style="margin-bottom:10px; font-size:10px;">Fluxo completo — Criacao de Anuncio</div>
-        <div class="flow-text" style="margin-top:0; margin-bottom:20px;">
-          <span>ControladorAnuncio</span>
-          <span class="arr"> → </span>
-          <span>ServicoAnuncioPadrao</span>
-          <span class="arr"> → </span>
-          <span>DiretorAnuncio</span>
-          <span class="arr"> → </span>
-          <span>AnuncioConcretoBuilder</span>
-          <span class="arr"> → </span>
-          <span>Anuncio</span>
-        </div>
-        <pre><span class="cm">// ServicoAnuncioPadrao.java</span>
-<span class="ann">@Override</span>
+      <div class="col-divider">
+        <p class="body-sm" style="margin-bottom:10px;"><strong style="color:var(--green);">Director + Serviço</strong> — código limpo, sem conhecer os campos:</p>
+        <div class="code-header">ServicoAnuncioPadrao.java — com Builder</div>
+        <pre><span class="ann">@Override</span>
 <span class="kw">public</span> <span class="tp">RespostaAnuncio</span> <span class="fn">criar</span>(
     <span class="tp">ContaUsuario</span> conta,
     <span class="tp">RequisicaoAnuncio</span> req) {
 
   <span class="tp">DiretorAnuncio</span> diretor =
     <span class="kw">new</span> <span class="tp">DiretorAnuncio</span>(
-      <span class="kw">new</span> <span class="tp">AnuncioConcretoBuilder</span>()
+      <span class="kw">new</span> <span class="tp">AnuncioConcretoBuilder</span>() <span class="cm">// ← injeção da impl</span>
     );
 
   <span class="tp">Anuncio</span> anuncio =
     diretor.<span class="fn">construirDaRequisicao</span>(conta, req);
+    <span class="cm">// ↑ se inválido, lança exceção aqui — antes do save</span>
 
   <span class="kw">return</span> <span class="fn">montarResposta</span>(
-    repositorio.<span class="fn">save</span>(anuncio)
+    repositorio.<span class="fn">save</span>(anuncio) <span class="cm">// ← sempre válido</span>
   );
 }</pre>
-        <div class="accent-block" style="margin-top:12px;">
-          <p class="body-sm">O servico de aplicacao nao conhece nenhum campo do <code>Anuncio</code> — delega ao Diretor, que conhece o processo de montagem.</p>
+        <div style="margin-top:12px;">
+          <div class="good-item">Campos nomeados — nenhuma ambiguidade de ordem</div>
+          <div class="good-item">Campos opcionais (<code>raça</code>, <code>descrição</code>) simplesmente omitidos</div>
+          <div class="good-item">Validação garante: objeto inválido nunca chega ao banco</div>
+          <div class="good-item">Construtor de <code>Anuncio</code> é package-private — blindado</div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- SLIDE 6: CODIGO ANUNCIO -->
+  <!-- SLIDE 6: ESTRUTURA COMPLETA NO AGROPLACE -->
   <section class="slide" data-slide="5">
-    <div class="anim-child label">Codigo — Modulo Anuncio</div>
-    <div class="anim-child title-lg" style="margin-bottom:20px;">Interface, ConcreteBuilder e Director</div>
-    <div class="anim-child two-col" style="gap:48px; align-items:start;">
+    <div class="anim-child label">Estrutura — AgroPlace</div>
+    <div class="anim-child title-lg" style="margin-bottom:22px;">Builder em 3 módulos do backend</div>
+    <div class="anim-child" style="display:grid; grid-template-columns:1fr 1px 1.6fr; gap:40px; align-items:start;">
       <div>
-        <div class="label" style="margin-bottom:10px; font-size:10px;">AnuncioBuilder.java — Interface</div>
-        <pre><span class="kw">public interface</span> <span class="tp">AnuncioBuilder</span> {
-  <span class="tp">AnuncioBuilder</span> <span class="fn">conta</span>(<span class="tp">ContaUsuario</span> conta);
-  <span class="tp">AnuncioBuilder</span> <span class="fn">titulo</span>(<span class="tp">String</span> titulo);
-  <span class="tp">AnuncioBuilder</span> <span class="fn">especie</span>(<span class="tp">String</span> especie);
-  <span class="tp">AnuncioBuilder</span> <span class="fn">raca</span>(<span class="tp">String</span> raca);
-  <span class="tp">AnuncioBuilder</span> <span class="fn">quantidade</span>(<span class="kw">int</span> qtd);
-  <span class="tp">AnuncioBuilder</span> <span class="fn">pesoMedioKg</span>(<span class="tp">BigDecimal</span> v);
-  <span class="tp">AnuncioBuilder</span> <span class="fn">idadeMediaMeses</span>(<span class="tp">Integer</span> v);
-  <span class="tp">AnuncioBuilder</span> <span class="fn">sexo</span>(<span class="tp">SexoAnimal</span> sexo);
-  <span class="tp">AnuncioBuilder</span> <span class="fn">precoUnitario</span>(<span class="tp">BigDecimal</span> v);
-  <span class="tp">AnuncioBuilder</span> <span class="fn">cidade</span>(<span class="tp">String</span> cidade);
-  <span class="tp">AnuncioBuilder</span> <span class="fn">estado</span>(<span class="tp">String</span> estado);
-  <span class="tp">AnuncioBuilder</span> <span class="fn">descricao</span>(<span class="tp">String</span> desc);
-  <span class="tp">Anuncio</span> <span class="fn">construir</span>();
-}</pre>
-      </div>
-      <div class="col-divider">
-        <div class="label" style="margin-bottom:10px; font-size:10px;">AnuncioConcretoBuilder.java — validar()</div>
-        <pre><span class="kw">private void</span> <span class="fn">validar</span>() {
-  <span class="kw">if</span> (conta == <span class="kw">null</span>)
-    <span class="kw">throw new</span> <span class="tp">IllegalStateException</span>(
-      <span class="str">"Conta e obrigatoria"</span>);
-  <span class="kw">if</span> (titulo == <span class="kw">null</span> || titulo.<span class="fn">isBlank</span>())
-    <span class="kw">throw new</span> <span class="tp">IllegalStateException</span>(
-      <span class="str">"Titulo e obrigatorio"</span>);
-  <span class="kw">if</span> (quantidade &lt; <span class="tp">1</span>)
-    <span class="kw">throw new</span> <span class="tp">IllegalStateException</span>(
-      <span class="str">"Quantidade minima: 1"</span>);
-  <span class="kw">if</span> (precoUnitario.<span class="fn">compareTo</span>(
-      <span class="tp">BigDecimal</span>.<span class="tp">ZERO</span>) &lt;= <span class="tp">0</span>)
-    <span class="kw">throw new</span> <span class="tp">IllegalStateException</span>(
-      <span class="str">"Preco deve ser positivo"</span>);
-  <span class="kw">if</span> (estado.<span class="fn">length</span>() != <span class="tp">2</span>)
-    <span class="kw">throw new</span> <span class="tp">IllegalStateException</span>(
-      <span class="str">"Estado invalido (use UF)"</span>);
-}</pre>
-        <div class="accent-block" style="margin-top:12px;">
-          <p class="body-sm">O construtor de <code>Anuncio</code> e <strong style="color:var(--text);">package-private</strong>: so o ConcreteBuilder pode instanciar o produto — nenhum codigo externo cria um <code>Anuncio</code> invalido.</p>
+        <div class="label" style="margin-bottom:12px;">Módulos com Builder</div>
+        <div class="def-list">
+          <div class="def-row" style="grid-template-columns:1fr; padding:13px 0;">
+            <div class="def-term" style="color:var(--green); font-size:13px;">autenticacao</div>
+            <div class="def-desc" style="margin-top:4px;"><code>ContaUsuario</code> — 7 campos: nome, email, telefone, documento, nomeEmpresa, senhaHash, tipoConta</div>
+          </div>
+          <div class="def-row" style="grid-template-columns:1fr; padding:13px 0;">
+            <div class="def-term" style="color:var(--green); font-size:13px;">anuncio</div>
+            <div class="def-desc" style="margin-top:4px;"><code>Anuncio</code> — 12 campos: espécie, raça, peso, idade, sexo, quantidade, preço, cidade, estado, descrição, conta, título</div>
+          </div>
+          <div class="def-row" style="grid-template-columns:1fr; padding:13px 0;">
+            <div class="def-term" style="color:var(--green); font-size:13px;">perfil</div>
+            <div class="def-desc" style="margin-top:4px;"><code>PerfilProdutor</code>, <code>PerfilTransportadora</code> e <code>PerfilCorporativa</code> — 3 builders distintos para 3 tipos de usuário</div>
+          </div>
         </div>
+        <div style="margin-top:20px; display:grid; grid-template-columns:1fr 1fr; gap:0;">
+          <div style="padding:12px 12px 12px 0; border-right:1px solid var(--divider); border-bottom:1px solid var(--divider);">
+            <div style="font-size:28px; font-weight:800; color:var(--green);">15</div>
+            <div class="body-sm">arquivos Builder</div>
+          </div>
+          <div style="padding:12px; border-bottom:1px solid var(--divider);">
+            <div style="font-size:28px; font-weight:800; color:var(--green);">5</div>
+            <div class="body-sm">interfaces Builder</div>
+          </div>
+          <div style="padding:12px 12px 12px 0; border-right:1px solid var(--divider);">
+            <div style="font-size:28px; font-weight:800; color:var(--green);">5</div>
+            <div class="body-sm">ConcreteBuilders</div>
+          </div>
+          <div style="padding:12px;">
+            <div style="font-size:28px; font-weight:800; color:var(--green);">5</div>
+            <div class="body-sm">Directors</div>
+          </div>
+        </div>
+      </div>
+      <div style="background:var(--divider);"></div>
+      <div>
+        <div class="label" style="margin-bottom:10px; font-size:10px;">Fluxo completo — criação de Anúncio</div>
+        <div class="flow-text" style="margin-bottom:20px;">
+          <span>ControladorAnuncio</span>
+          <span class="arr">→</span>
+          <span>ServicoAnuncioPadrao</span>
+          <span class="arr">→</span>
+          <span>DiretorAnuncio</span>
+          <span class="arr">→</span>
+          <span>AnuncioConcretoBuilder</span>
+          <span class="arr">→</span>
+          <span>Anuncio</span>
+        </div>
+        <div class="code-header">DiretorAnuncio.java</div>
+        <pre><span class="kw">public class</span> <span class="tp">DiretorAnuncio</span> {
+
+  <span class="kw">private final</span> <span class="tp">AnuncioBuilder</span> builder;
+  <span class="cm">// ↑ depende da interface, não da implementação</span>
+
+  <span class="kw">public</span> <span class="tp">DiretorAnuncio</span>(<span class="tp">AnuncioBuilder</span> b) {
+    <span class="kw">this</span>.builder = b;
+  }
+
+  <span class="kw">public</span> <span class="tp">Anuncio</span> <span class="fn">construirDaRequisicao</span>(
+      <span class="tp">ContaUsuario</span> conta,
+      <span class="tp">RequisicaoAnuncio</span> req) {
+    <span class="kw">return</span> builder
+      .<span class="fn">conta</span>(conta).<span class="fn">titulo</span>(req.<span class="fn">titulo</span>())
+      .<span class="fn">especie</span>(req.<span class="fn">especie</span>()).<span class="fn">raca</span>(req.<span class="fn">raca</span>())
+      .<span class="fn">quantidade</span>(req.<span class="fn">quantidade</span>())
+      .<span class="fn">pesoMedioKg</span>(req.<span class="fn">pesoMedioKg</span>())
+      .<span class="fn">sexo</span>(req.<span class="fn">sexo</span>())
+      .<span class="fn">precoUnitario</span>(req.<span class="fn">precoUnitario</span>())
+      .<span class="fn">cidade</span>(req.<span class="fn">cidade</span>()).<span class="fn">estado</span>(req.<span class="fn">estado</span>())
+      .<span class="fn">descricao</span>(req.<span class="fn">descricao</span>())
+      .<span class="fn">construir</span>(); <span class="cm">// ← valida e cria</span>
+  }
+}</pre>
       </div>
     </div>
   </section>
 
-  <!-- SLIDE 7: CODIGO AUTENTICACAO -->
+  <!-- SLIDE 7: CÓDIGO AUTENTICAÇÃO -->
   <section class="slide" data-slide="6">
-    <div class="anim-child label">Codigo — Modulo Autenticacao</div>
-    <div class="anim-child title-lg" style="margin-bottom:20px;">ContaUsuarioBuilder e uso no Servico</div>
+    <div class="anim-child label">Código — Módulo Autenticação</div>
+    <div class="anim-child title-lg" style="margin-bottom:20px;">ContaUsuarioBuilder e uso no serviço</div>
     <div class="anim-child two-col" style="gap:48px; align-items:start;">
       <div>
-        <div class="label" style="margin-bottom:10px; font-size:10px;">ContaUsuarioBuilder.java — Interface</div>
+        <div class="code-header">ContaUsuarioBuilder.java — interface</div>
         <pre><span class="kw">public interface</span> <span class="tp">ContaUsuarioBuilder</span> {
   <span class="tp">ContaUsuarioBuilder</span> <span class="fn">nome</span>(<span class="tp">String</span> nome);
   <span class="tp">ContaUsuarioBuilder</span> <span class="fn">email</span>(<span class="tp">String</span> email);
@@ -464,7 +493,7 @@
   <span class="tp">ContaUsuario</span> <span class="fn">construir</span>();
 }</pre>
         <div style="margin-top:12px;">
-          <div class="label" style="margin-bottom:8px; font-size:10px;">TipoConta.java — Enum</div>
+          <div class="code-header">TipoConta.java — enum</div>
           <pre><span class="kw">public enum</span> <span class="tp">TipoConta</span> {
   PRODUTOR,
   TRANSPORTADORA,
@@ -473,14 +502,15 @@
         </div>
       </div>
       <div class="col-divider">
-        <div class="label" style="margin-bottom:10px; font-size:10px;">ServicoAutenticacaoPadrao.java — cadastrar()</div>
+        <div class="code-header">ServicoAutenticacaoPadrao.java — cadastrar()</div>
         <pre><span class="tp">DiretorContaUsuario</span> diretor =
   <span class="kw">new</span> <span class="tp">DiretorContaUsuario</span>(
     <span class="kw">new</span> <span class="tp">ContaUsuarioConcretoBuilder</span>()
   );
 
-<span class="tp">String</span> nomeEmpresa = requisicao
-  .<span class="fn">tipoConta</span>() == <span class="tp">TipoConta</span>.<span class="tp">PRODUTOR</span>
+<span class="cm">// nomeEmpresa é opcional para PRODUTOR</span>
+<span class="tp">String</span> nomeEmpresa =
+  requisicao.<span class="fn">tipoConta</span>() == <span class="tp">TipoConta</span>.<span class="tp">PRODUTOR</span>
     ? <span class="kw">null</span>
     : requisicao.<span class="fn">nomeEmpresa</span>();
 
@@ -491,25 +521,22 @@
     requisicao.<span class="fn">telefone</span>(),
     requisicao.<span class="fn">documento</span>(),
     nomeEmpresa,
-    codificadorSenha.<span class="fn">encode</span>(
-      requisicao.<span class="fn">senha</span>()),
+    codificadorSenha.<span class="fn">encode</span>(requisicao.<span class="fn">senha</span>()),
     requisicao.<span class="fn">tipoConta</span>()
-  );
+  ); <span class="cm">// ← validação executada internamente</span>
 
-<span class="kw">return</span> <span class="fn">montarResposta</span>(
-  repositorio.<span class="fn">save</span>(conta)
-);</pre>
+<span class="kw">return</span> <span class="fn">montarResposta</span>(repositorio.<span class="fn">save</span>(conta));</pre>
       </div>
     </div>
   </section>
 
-  <!-- SLIDE 8: CODIGO PERFIL -->
+  <!-- SLIDE 8: CÓDIGO PERFIL -->
   <section class="slide" data-slide="7">
-    <div class="anim-child label">Codigo — Modulo Perfil</div>
-    <div class="anim-child title-lg" style="margin-bottom:20px;">Tres builders para tres perfis de usuario</div>
+    <div class="anim-child label">Código — Módulo Perfil</div>
+    <div class="anim-child title-lg" style="margin-bottom:20px;">Três builders para três perfis de usuário</div>
     <div class="anim-child" style="display:grid; grid-template-columns:1fr 1px 1.6fr; gap:40px; align-items:start;">
       <div>
-        <div class="label" style="margin-bottom:12px;">Tres perfis, tres builders</div>
+        <div class="label" style="margin-bottom:12px;">Três perfis, três builders independentes</div>
         <div class="def-list">
           <div class="def-row" style="grid-template-columns:1fr; padding:12px 0;">
             <div class="def-term" style="color:var(--green); font-size:12px;">PerfilProdutorBuilder</div>
@@ -525,12 +552,12 @@
           </div>
         </div>
         <div class="accent-block" style="margin-top:16px;">
-          <p class="body-sm">Cada tipo de usuario tem campos especificos do seu dominio. O Builder garante que cada perfil seja montado com as regras corretas sem compartilhar logica.</p>
+          <p class="body-sm">Cada tipo de usuário tem campos específicos do seu domínio. O Builder garante que cada perfil seja montado com as regras corretas sem compartilhar lógica desnecessária.</p>
         </div>
       </div>
       <div style="background:var(--divider);"></div>
       <div>
-        <div class="label" style="margin-bottom:10px; font-size:10px;">PerfilProdutorConcretoBuilder.java — construir() + validar()</div>
+        <div class="code-header">PerfilProdutorConcretoBuilder.java — construir() + validar()</div>
         <pre><span class="ann">@Override</span>
 <span class="kw">public</span> <span class="tp">PerfilProdutor</span> <span class="fn">construir</span>() {
   <span class="fn">validar</span>();
@@ -540,20 +567,24 @@
 <span class="kw">private void</span> <span class="fn">validar</span>() {
   <span class="kw">if</span> (conta == <span class="kw">null</span>)
     <span class="kw">throw new</span> <span class="tp">IllegalStateException</span>(
-      <span class="str">"Conta e obrigatoria"</span>);
+      <span class="str">"Conta é obrigatória"</span>);
   <span class="kw">if</span> (nomePropriedade == <span class="kw">null</span>
       || nomePropriedade.<span class="fn">isBlank</span>())
     <span class="kw">throw new</span> <span class="tp">IllegalStateException</span>(
-      <span class="str">"Nome da propriedade e obrigatorio"</span>);
-  <span class="kw">if</span> (cidade == <span class="kw">null</span>
-      || cidade.<span class="fn">isBlank</span>())
+      <span class="str">"Nome da propriedade é obrigatório"</span>);
+  <span class="kw">if</span> (cidade == <span class="kw">null</span> || cidade.<span class="fn">isBlank</span>())
     <span class="kw">throw new</span> <span class="tp">IllegalStateException</span>(
-      <span class="str">"Cidade e obrigatoria"</span>);
+      <span class="str">"Cidade é obrigatória"</span>);
   <span class="kw">if</span> (estado == <span class="kw">null</span>
       || estado.<span class="fn">length</span>() != <span class="tp">2</span>)
     <span class="kw">throw new</span> <span class="tp">IllegalStateException</span>(
-      <span class="str">"Estado invalido"</span>);
-}</pre>
+      <span class="str">"Estado inválido"</span>);
+}
+
+<span class="cm">// getters utilizados pelo construtor de PerfilProdutor</span>
+<span class="kw">public</span> <span class="tp">ContaUsuario</span> <span class="fn">getConta</span>() { <span class="kw">return</span> conta; }
+<span class="kw">public</span> <span class="tp">String</span> <span class="fn">getNomePropriedade</span>() { <span class="kw">return</span> nomePropriedade; }
+<span class="kw">public</span> <span class="tp">BigDecimal</span> <span class="fn">getAreaHectares</span>() { <span class="kw">return</span> areaHectares; }</pre>
       </div>
     </div>
   </section>
@@ -561,36 +592,36 @@
   <!-- SLIDE 9: VANTAGENS -->
   <section class="slide" data-slide="8">
     <div class="anim-child label">Vantagens</div>
-    <div class="anim-child title-lg" style="margin-bottom:24px;">Por que Builder e ideal para o AgroPlace</div>
+    <div class="anim-child title-lg" style="margin-bottom:22px;">Por que Builder é ideal para o AgroPlace</div>
     <div class="anim-child two-col" style="gap:64px; align-items:start;">
       <div>
         <div class="vantagem-list">
           <div class="vantagem-item">
             <div class="vantagem-icon">✦</div>
             <div>
-              <div class="vantagem-title">Legibilidade do codigo</div>
-              <div class="vantagem-desc">Cada campo e nomeado explicitamente na chain fluente. Nao ha duvida se o 4o argumento e peso ou quantidade.</div>
+              <div class="vantagem-title">Legibilidade do código</div>
+              <div class="vantagem-desc">Cada campo é nomeado explicitamente na chain fluente. Não há dúvida se o 4º argumento é peso ou quantidade.</div>
             </div>
           </div>
           <div class="vantagem-item">
             <div class="vantagem-icon">✦</div>
             <div>
-              <div class="vantagem-title">Validacao fail-fast</div>
-              <div class="vantagem-desc"><code>construir()</code> e a unica porta de saida. Nenhum objeto invalido chega ao repositorio — regras de negocio protegidas na camada de dominio.</div>
+              <div class="vantagem-title">Validação fail-fast</div>
+              <div class="vantagem-desc"><code>construir()</code> é a única porta de saída. Nenhum objeto inválido chega ao repositório — regras protegidas na camada de domínio.</div>
             </div>
           </div>
           <div class="vantagem-item">
             <div class="vantagem-icon">✦</div>
             <div>
-              <div class="vantagem-title">Campos opcionais sem null</div>
-              <div class="vantagem-desc">Campos como <code>raca</code> e <code>descricao</code> simplesmente nao sao chamados. Sem sobrecarga de construtores e sem <code>null</code> explicito.</div>
+              <div class="vantagem-title">Campos opcionais sem <code>null</code></div>
+              <div class="vantagem-desc">Campos como <code>raça</code> e <code>descrição</code> simplesmente não são chamados. Sem sobrecarga de construtores e sem <code>null</code> explícito.</div>
             </div>
           </div>
           <div class="vantagem-item">
             <div class="vantagem-icon">✦</div>
             <div>
               <div class="vantagem-title">Encapsulamento total do produto</div>
-              <div class="vantagem-desc">O construtor de <code>Anuncio</code> e package-private. Impossivel criar um produto malformado fora do Builder.</div>
+              <div class="vantagem-desc">O construtor de <code>Anuncio</code> é package-private. Impossível criar um produto malformado fora do Builder.</div>
             </div>
           </div>
         </div>
@@ -601,28 +632,28 @@
             <div class="vantagem-icon">✦</div>
             <div>
               <div class="vantagem-title">Extensibilidade</div>
-              <div class="vantagem-desc">Adicionar um campo ao <code>Anuncio</code> requer apenas um novo metodo na interface e no ConcreteBuilder. O Director e o Servico nao mudam — Open/Closed Principle.</div>
+              <div class="vantagem-desc">Adicionar um campo ao <code>Anuncio</code> requer apenas um novo método na interface e no ConcreteBuilder. O Director e o Serviço não mudam — Open/Closed Principle.</div>
             </div>
           </div>
           <div class="vantagem-item">
             <div class="vantagem-icon">✦</div>
             <div>
               <div class="vantagem-title">Testabilidade</div>
-              <div class="vantagem-desc">Cada ConcreteBuilder pode ser testado isoladamente. E possivel criar um <code>MockBuilder</code> implementando a interface para testes de Diretor sem dependencias reais.</div>
+              <div class="vantagem-desc">Cada ConcreteBuilder pode ser testado isoladamente. É possível criar um <code>MockBuilder</code> implementando a interface para testes de Director sem dependências reais.</div>
             </div>
           </div>
           <div class="vantagem-item">
             <div class="vantagem-icon">✦</div>
             <div>
-              <div class="vantagem-title">Separacao de responsabilidades</div>
-              <div class="vantagem-desc">O Servico cuida das regras de negocio. O Director cuida do processo de montagem. O ConcreteBuilder cuida dos campos e validacoes. Clean Architecture respeitada.</div>
+              <div class="vantagem-title">Separação de responsabilidades</div>
+              <div class="vantagem-desc">O Serviço cuida das regras de negócio. O Director cuida do processo de montagem. O ConcreteBuilder cuida dos campos e validações.</div>
             </div>
           </div>
           <div class="vantagem-item">
             <div class="vantagem-icon">✦</div>
             <div>
-              <div class="vantagem-title">Consistencia entre modulos</div>
-              <div class="vantagem-desc">Os 3 modulos (autenticacao, anuncio, perfil) seguem exatamente o mesmo padrao. Qualquer desenvolvedor que entra no projeto entende imediatamente a estrutura.</div>
+              <div class="vantagem-title">Consistência entre módulos</div>
+              <div class="vantagem-desc">Os 3 módulos seguem o mesmo padrão. Qualquer desenvolvedor que entra no projeto entende imediatamente a estrutura.</div>
             </div>
           </div>
         </div>
@@ -632,41 +663,41 @@
 
   <!-- SLIDE 10: BUILDER E SOLID -->
   <section class="slide" data-slide="9">
-    <div class="anim-child label">Principios SOLID</div>
-    <div class="anim-child title-lg" style="margin-bottom:28px;">Builder e SOLID — como se complementam</div>
+    <div class="anim-child label">Princípios SOLID</div>
+    <div class="anim-child title-lg" style="margin-bottom:24px;">Builder e SOLID — como se complementam</div>
     <div class="anim-child">
       <table class="data-table">
         <thead>
           <tr>
-            <th style="width:100px;">Principio</th>
+            <th style="width:100px;">Princípio</th>
             <th>Como o Builder aplica no AgroPlace</th>
-            <th style="width:220px;">Evidencia no codigo</th>
+            <th style="width:220px;">Evidência no código</th>
           </tr>
         </thead>
         <tbody>
           <tr>
             <td>S — SRP</td>
-            <td>Builder cuida exclusivamente da montagem e validacao. Servico cuida da regra de negocio. Director cuida do processo. Cada classe tem uma unica razao para mudar.</td>
-            <td style="color:#94a3b8; font-size:12px;"><code>ServicoAnuncioPadrao</code> nao conhece campos de <code>Anuncio</code></td>
+            <td>Builder cuida exclusivamente da montagem e validação. Serviço cuida da regra de negócio. Director cuida do processo. Cada classe tem uma única razão para mudar.</td>
+            <td style="color:#94a3b8; font-size:12px;"><code>ServicoAnuncioPadrao</code> não conhece campos de <code>Anuncio</code></td>
           </tr>
           <tr>
             <td>O — OCP</td>
-            <td>Para adicionar <code>fotoPrincipal</code> ao Anuncio, basta um novo metodo na interface e no ConcreteBuilder — sem alterar Diretor ou Servico.</td>
-            <td style="color:#94a3b8; font-size:12px;">Interface <code>AnuncioBuilder</code> define contrato extensivel</td>
+            <td>Para adicionar <code>fotoPrincipal</code> ao Anúncio, basta um novo método na interface e no ConcreteBuilder — sem alterar Director ou Serviço.</td>
+            <td style="color:#94a3b8; font-size:12px;">Interface <code>AnuncioBuilder</code> define contrato extensível</td>
           </tr>
           <tr>
             <td>L — LSP</td>
-            <td>Qualquer novo ConcreteBuilder que implemente <code>AnuncioBuilder</code> pode substituir <code>AnuncioConcretoBuilder</code> no Diretor sem quebrar comportamento.</td>
+            <td>Qualquer novo ConcreteBuilder que implemente <code>AnuncioBuilder</code> pode substituir <code>AnuncioConcretoBuilder</code> no Director sem quebrar o comportamento.</td>
             <td style="color:#94a3b8; font-size:12px;"><code>DiretorAnuncio</code> depende apenas da interface</td>
           </tr>
           <tr>
             <td>I — ISP</td>
-            <td>Cada Builder tem apenas os metodos do seu produto. <code>ContaUsuarioBuilder</code> nao tem metodos de <code>AnuncioBuilder</code> — interfaces enxutas e coesas.</td>
+            <td>Cada Builder tem apenas os métodos do seu produto. <code>ContaUsuarioBuilder</code> não tem métodos de <code>AnuncioBuilder</code> — interfaces enxutas e coesas.</td>
             <td style="color:#94a3b8; font-size:12px;">5 interfaces distintas para 5 entidades</td>
           </tr>
           <tr>
             <td>D — DIP</td>
-            <td><code>DiretorAnuncio</code> recebe um <code>AnuncioBuilder</code> (interface) no construtor, nao um ConcreteBuilder. Depende da abstracao, nao da implementacao.</td>
+            <td><code>DiretorAnuncio</code> recebe um <code>AnuncioBuilder</code> (interface) no construtor, não um ConcreteBuilder. Depende da abstração, não da implementação.</td>
             <td style="color:#94a3b8; font-size:12px;"><code>new DiretorAnuncio(new AnuncioConcretoBuilder())</code></td>
           </tr>
         </tbody>
@@ -674,101 +705,106 @@
     </div>
   </section>
 
-  <!-- SLIDE 11: ANTES E DEPOIS -->
+  <!-- SLIDE 11: ANTES E DEPOIS COMPARATIVO -->
   <section class="slide" data-slide="10">
     <div class="anim-child label">Comparativo</div>
-    <div class="anim-child title-lg" style="margin-bottom:28px;">Antes e depois — impacto real no codigo</div>
-    <div class="anim-child ba-grid">
+    <div class="anim-child title-lg" style="margin-bottom:24px;">Antes e depois — impacto real no código</div>
+    <div class="anim-child" style="display:grid; grid-template-columns:1fr 1px 1fr; gap:48px; align-items:start;">
       <div>
-        <div class="label" style="color:#ef4444; margin-bottom:14px;">Antes — Telescoping Constructor</div>
-        <pre style="font-size:11px;"><span class="cm">// 12 parametros posicionais</span>
-<span class="cm">// sem validacao, sem nomes</span>
-<span class="kw">new</span> <span class="tp">Anuncio</span>(
-  conta, titulo, especie,
-  raca, quantidade, peso,
-  idade, sexo, preco,
-  cidade, estado, descricao
+        <div class="label-red" style="margin-bottom:12px;">Sem Builder</div>
+        <pre class="bad" style="font-size:11px;"><span class="kw">new</span> <span class="tp">Anuncio</span>(
+  conta,
+  titulo,
+  especie,
+  raca,        <span class="err">// ← null se não tiver raça?</span>
+  quantidade,  <span class="err">// ← parâmetro 5 ou 6?</span>
+  peso,
+  idade,
+  sexo,
+  preco,       <span class="err">// ← e se vier negativo?</span>
+  cidade,
+  estado,      <span class="err">// ← e se tiver 3 caracteres?</span>
+  descricao    <span class="err">// ← null se não tiver?</span>
 );</pre>
-        <div style="margin-top:12px;">
-          <div class="bad-item">Objeto invalido pode ser criado</div>
-          <div class="bad-item">Ordem dos parametros causa bugs silenciosos</div>
-          <div class="bad-item">Campos opcionais forcam <code>null</code> explicito</div>
-          <div class="bad-item">Leitura impossivel sem IDE</div>
-          <div class="bad-item">Qualquer novo campo quebra todas as chamadas</div>
+        <div style="margin-top:10px;">
+          <div class="bad-item">Objeto inválido pode ser criado e persistido</div>
+          <div class="bad-item">Troca de posição de parâmetros causa bug silencioso</div>
+          <div class="bad-item">Campos opcionais forçam <code>null</code> explícito</div>
+          <div class="bad-item">Leitura impossível sem IDE</div>
         </div>
       </div>
-      <div class="ba-divider-line"></div>
+      <div style="background:var(--divider);"></div>
       <div>
-        <div class="label" style="color:var(--green); margin-bottom:14px;">Depois — Builder + Director</div>
-        <pre style="font-size:11px;"><span class="cm">// Fluent API nomeada</span>
-<span class="cm">// validar() chamado em construir()</span>
+        <div class="label" style="margin-bottom:12px;">Com Builder</div>
+        <pre style="font-size:11px;"><span class="cm">// Diretor encapsula o processo</span>
 diretor.<span class="fn">construirDaRequisicao</span>(
   conta, req
 );
 
-<span class="cm">// internamente:</span>
-builder.<span class="fn">conta</span>(conta)
+<span class="cm">// internamente — chain fluente:</span>
+builder
+  .<span class="fn">conta</span>(conta)
   .<span class="fn">titulo</span>(req.<span class="fn">titulo</span>())
   .<span class="fn">especie</span>(req.<span class="fn">especie</span>())
   .<span class="fn">precoUnitario</span>(req.<span class="fn">precoUnitario</span>())
-  .<span class="fn">construir</span>(); <span class="cm">// valida aqui</span></pre>
-        <div style="margin-top:12px;">
-          <div class="good-item">Validacao centralizada em <code>validar()</code></div>
+  <span class="cm">// raça e descrição omitidos se null</span>
+  .<span class="fn">construir</span>(); <span class="cm">// ← valida tudo aqui</span></pre>
+        <div style="margin-top:10px;">
+          <div class="good-item">Validação centralizada — objeto nasce válido</div>
           <div class="good-item">Campos nomeados — legibilidade total</div>
           <div class="good-item">Campos opcionais simplesmente omitidos</div>
-          <div class="good-item">Produto invalido nunca sai do Builder</div>
-          <div class="good-item">Novos campos nao quebram o Servico</div>
+          <div class="good-item">Produto inválido nunca sai do Builder</div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- SLIDE 12: CONCLUSAO -->
+  <!-- SLIDE 12: CONCLUSÃO -->
   <section class="slide" data-slide="11">
-    <div class="anim-child label">Conclusao</div>
-    <div class="anim-child title-lg" style="margin-bottom:28px;">Builder no AgroPlace — resumo</div>
+    <div class="anim-child label">Conclusão</div>
+    <div class="anim-child title-lg" style="margin-bottom:26px;">Builder no AgroPlace — resumo</div>
     <div class="anim-child two-col" style="gap:64px; align-items:start;">
       <div>
         <div class="def-list">
-          <div class="def-row" style="grid-template-columns:1fr; padding:16px 0;">
+          <div class="def-row" style="grid-template-columns:1fr; padding:15px 0;">
             <div class="def-term" style="font-size:14px; color:var(--green);">Problema resolvido</div>
-            <div class="def-desc" style="margin-top:6px;">Os 3 modulos criavam objetos com 7 a 12 parametros posicionais. O Builder substituiu por uma API fluente nomeada, segura e extensivel.</div>
+            <div class="def-desc" style="margin-top:6px;">Os 3 módulos criavam objetos com 7 a 12 parâmetros posicionais. O Builder substituiu por uma API fluente nomeada, segura e extensível.</div>
           </div>
-          <div class="def-row" style="grid-template-columns:1fr; padding:16px 0;">
-            <div class="def-term" style="font-size:14px; color:var(--green);">Validacao garantida</div>
-            <div class="def-desc" style="margin-top:6px;"><code>validar()</code> no ConcreteBuilder garante que nenhum objeto invalido chega ao <code>repositorio.save()</code> — fail-fast antes da persistencia.</div>
+          <div class="def-row" style="grid-template-columns:1fr; padding:15px 0;">
+            <div class="def-term" style="font-size:14px; color:var(--green);">Validação garantida</div>
+            <div class="def-desc" style="margin-top:6px;"><code>validar()</code> no ConcreteBuilder garante que nenhum objeto inválido chega ao <code>repositorio.save()</code> — fail-fast antes da persistência.</div>
           </div>
-          <div class="def-row" style="grid-template-columns:1fr; padding:16px 0;">
+          <div class="def-row" style="grid-template-columns:1fr; padding:15px 0;">
             <div class="def-term" style="font-size:14px; color:var(--green);">Arquitetura limpa</div>
-            <div class="def-desc" style="margin-top:6px;">Padrao aplicado em sincronia com Clean Architecture — Builder vive no dominio, Diretor na aplicacao, sem vazamento de dependencias.</div>
+            <div class="def-desc" style="margin-top:6px;">Padrão aplicado em sincronia com Clean Architecture — Builder vive no domínio, Director na aplicação, sem vazamento de dependências.</div>
           </div>
         </div>
       </div>
       <div class="col-divider">
-        <div class="label" style="margin-bottom:18px;">Numeros do projeto</div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0; margin-bottom:28px;">
+        <div class="label" style="margin-bottom:18px;">Números do projeto</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0; margin-bottom:26px;">
           <div style="padding:14px 14px 14px 0; border-right:1px solid var(--divider); border-bottom:1px solid var(--divider);">
             <div style="font-size:36px; font-weight:800; color:var(--green);">3</div>
-            <div class="body-sm">modulos com Builder</div>
+            <div class="body-sm">módulos com Builder</div>
           </div>
           <div style="padding:14px; border-bottom:1px solid var(--divider);">
             <div style="font-size:36px; font-weight:800; color:var(--green);">15</div>
-            <div class="body-sm">arquivos dedicados ao padrao</div>
+            <div class="body-sm">arquivos dedicados ao padrão</div>
           </div>
           <div style="padding:14px 14px 14px 0; border-right:1px solid var(--divider);">
             <div style="font-size:36px; font-weight:800; color:var(--green);">5</div>
-            <div class="body-sm">principios SOLID atendidos</div>
+            <div class="body-sm">princípios SOLID atendidos</div>
           </div>
           <div style="padding:14px;">
             <div style="font-size:36px; font-weight:800; color:var(--green);">0</div>
-            <div class="body-sm">construtores telescopicos no dominio</div>
+            <div class="body-sm">construtores telescópicos no domínio</div>
           </div>
         </div>
         <div class="accent-block">
-          <p class="body-sm">O padrao Builder e a escolha natural quando um objeto requer muitos parametros de inicializacao, quando alguns sao opcionais e quando a validade do estado e pre-condicao critica para a persistencia.</p>
+          <p class="body-sm">O padrão Builder é a escolha natural quando um objeto requer muitos parâmetros de inicialização, quando alguns são opcionais e quando a validade do estado é pré-condição crítica para a persistência.</p>
         </div>
-        <div style="margin-top:20px; padding-top:20px; border-top:1px solid var(--divider);">
-          <p class="body-sm" style="font-size:12px; color:var(--muted);">Gustavo Q. Mateus &nbsp;·&nbsp; UNIFOR 2026.1 &nbsp;·&nbsp; Padroes de Projeto de Software</p>
+        <div style="margin-top:20px; padding-top:16px; border-top:1px solid var(--divider);">
+          <p class="body-sm" style="font-size:12px; color:var(--muted);">Gustavo Q. Mateus &nbsp;·&nbsp; UNIFOR 2026.1 &nbsp;·&nbsp; Padrões de Projeto de Software</p>
         </div>
       </div>
     </div>
@@ -779,7 +815,7 @@ builder.<span class="fn">conta</span>(conta)
 <div id="controls">
   <button class="ctrl-btn" id="prev-btn">Anterior</button>
   <span id="slide-counter">1 / 12</span>
-  <button class="ctrl-btn" id="next-btn">Proximo</button>
+  <button class="ctrl-btn" id="next-btn">Próximo</button>
   <button id="pdf-btn" onclick="window.print()">Exportar PDF</button>
 </div>
 
