@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Padrao Builder — AgroPlace</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0f1e;
+    --green: #22c55e;
+    --text: #f0f4f8;
+    --muted: #64748b;
+    --border: #1e2d40;
+    --divider: #1a2540;
+    --code-bg: #0d1117;
+  }
+
+  html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; }
+
+  #progress-bar { position: fixed; top: 0; left: 0; height: 2px; background: var(--green); transition: width 0.4s ease; z-index: 100; }
+  #dot-nav { position: fixed; right: 24px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 9px; z-index: 100; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); cursor: pointer; transition: all 0.3s; }
+  .dot.active { background: var(--green); transform: scale(1.5); }
+
+  #controls { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 24px; z-index: 100; }
+  .ctrl-btn { background: none; border: 1px solid var(--border); color: var(--muted); padding: 8px 20px; cursor: pointer; font-size: 13px; letter-spacing: 0.05em; transition: all 0.2s; }
+  .ctrl-btn:hover { border-color: var(--green); color: var(--green); }
+  #slide-counter { font-size: 12px; color: var(--muted); letter-spacing: 0.1em; min-width: 60px; text-align: center; }
+
+  #deck { width: 100%; height: 100%; position: relative; }
+  .slide { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; padding: 56px 96px 80px; opacity: 0; pointer-events: none; transition: opacity 0.5s ease; }
+  .slide.active { opacity: 1; pointer-events: all; }
+  .slide.active .anim-child { animation: fadeUp 0.6s ease both; }
+  .slide.active .anim-child:nth-child(2) { animation-delay: 0.08s; }
+  .slide.active .anim-child:nth-child(3) { animation-delay: 0.16s; }
+  .slide.active .anim-child:nth-child(4) { animation-delay: 0.24s; }
+  .slide.active .anim-child:nth-child(5) { animation-delay: 0.32s; }
+  .slide.active .anim-child:nth-child(6) { animation-delay: 0.40s; }
+  .slide.active .anim-child:nth-child(7) { animation-delay: 0.48s; }
+
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+
+  .label { font-size: 11px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; color: var(--green); margin-bottom: 14px; }
+  .title-xl { font-size: clamp(32px, 4.5vw, 58px); font-weight: 700; line-height: 1.05; letter-spacing: -0.02em; }
+  .title-lg { font-size: clamp(22px, 3vw, 40px); font-weight: 700; line-height: 1.1; letter-spacing: -0.02em; }
+  .body { font-size: 15px; line-height: 1.7; color: #cbd5e1; }
+  .body-sm { font-size: 13px; line-height: 1.6; color: #94a3b8; }
+  .rule { border: none; border-top: 1px solid var(--divider); margin: 20px 0; }
+  .rule-green { border: none; border-top: 1px solid var(--green); margin: 24px 0; width: 48px; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+  .col-divider { border-left: 1px solid var(--divider); padding-left: 48px; }
+  .ba-grid { display: grid; grid-template-columns: 1fr 1px 1fr; gap: 48px; align-items: start; }
+  .ba-divider-line { background: var(--divider); }
+
+  .def-list { display: flex; flex-direction: column; }
+  .def-row { display: grid; grid-template-columns: 210px 1fr; padding: 14px 0; border-bottom: 1px solid var(--divider); align-items: start; }
+  .def-row:first-child { border-top: 1px solid var(--divider); }
+  .def-term { font-size: 13px; font-weight: 600; color: var(--text); }
+  .def-desc { font-size: 13px; color: #94a3b8; line-height: 1.5; }
+
+  .data-table { width: 100%; border-collapse: collapse; }
+  .data-table th { font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); padding: 12px 0; border-bottom: 1px solid var(--green); text-align: left; }
+  .data-table td { padding: 13px 0; border-bottom: 1px solid var(--divider); font-size: 13px; color: #cbd5e1; vertical-align: top; padding-right: 16px; }
+  .data-table td:first-child { color: var(--text); font-weight: 600; width: 80px; }
+
+  .accent-block { border-left: 3px solid var(--green); padding-left: 18px; margin: 12px 0; }
+  .cover-tag { font-size: 11px; letter-spacing: 0.25em; text-transform: uppercase; color: var(--green); margin-bottom: 32px; display: flex; align-items: center; gap: 12px; }
+  .cover-tag::after { content: ''; flex: 1; height: 1px; background: var(--green); opacity: 0.3; }
+
+  pre {
+    background: var(--code-bg); padding: 18px 22px; overflow-x: auto;
+    border-left: 3px solid var(--green); font-size: 12px;
+    font-family: 'Courier New', monospace; line-height: 1.75; color: #e2e8f0;
+    margin: 12px 0;
+  }
+  code { font-family: 'Courier New', monospace; font-size: 12px; color: #94a3b8; }
+  .kw { color: #569cd6; }
+  .fn { color: #dcdcaa; }
+  .str { color: #ce9178; }
+  .cm { color: #6a9955; }
+  .tp { color: #4ec9b0; }
+  .ann { color: #c586c0; }
+
+  .participant-list { display: flex; flex-direction: column; gap: 0; margin: 16px 0; }
+  .participant { display: grid; grid-template-columns: 180px 1fr; padding: 14px 0; border-bottom: 1px solid var(--divider); align-items: start; }
+  .participant:first-child { border-top: 1px solid var(--divider); }
+  .p-name { font-size: 14px; font-weight: 700; color: var(--green); font-family: 'Courier New', monospace; }
+  .p-desc { font-size: 13px; color: #94a3b8; }
+
+  .flow-text { font-size: 15px; color: var(--muted); letter-spacing: 0.05em; margin-top: 20px; }
+  .flow-text span { color: var(--text); font-weight: 600; }
+  .flow-text .arr { color: var(--green); }
+
+  .bad-item { padding: 10px 0; border-bottom: 1px solid var(--divider); font-size: 13px; color: #94a3b8; }
+  .good-item { padding: 10px 0; border-bottom: 1px solid var(--divider); font-size: 13px; color: #94a3b8; }
+  .bad-item::before { content: '- '; color: #ef4444; }
+  .good-item::before { content: '+ '; color: var(--green); }
+
+  .gof-pattern { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0; }
+  .gof-item { padding: 16px 0; border-right: 1px solid var(--divider); padding-right: 20px; padding-left: 20px; }
+  .gof-item:first-child { padding-left: 0; }
+  .gof-item:last-child { border-right: none; }
+  .gof-item.selected { border-left: 3px solid var(--green); }
+</style>
+</head>
+<body>
+
+<div id="progress-bar"></div>
+<div id="dot-nav"></div>
+
+<div id="deck">
+
+  <!-- SLIDE 1: COVER -->
+  <section class="slide active" data-slide="0">
+    <div class="anim-child cover-tag">Seminario &nbsp;&middot;&nbsp; Padroes de Criacao &nbsp;&middot;&nbsp; UNIFOR 2026.1</div>
+    <div class="anim-child title-xl">Padrao Builder</div>
+    <hr class="rule-green anim-child" style="margin-top:24px;">
+    <p class="body anim-child" style="max-width:600px; margin-top:20px; font-style:italic; color:#94a3b8;">
+      "Separando a construcao de um objeto complexo da sua representacao, de modo que o mesmo processo de construcao possa criar diferentes representacoes."
+    </p>
+    <p class="body-sm anim-child" style="margin-top:8px;">— Gang of Four, Design Patterns, 1994</p>
+    <div class="anim-child" style="margin-top:40px; display:flex; gap:48px;">
+      <div><div class="label">Classificacao</div><div class="body-sm">Padrao de Criacao (Creational)</div></div>
+      <div><div class="label">Aplicado em</div><div class="body-sm">AgroPlace — 3 modulos do backend</div></div>
+      <div><div class="label">Linguagem</div><div class="body-sm">Java 17 / Spring Boot 3.4.5</div></div>
+    </div>
+  </section>
+
+  <!-- SLIDE 2: PADROES DE CRIACAO -->
+  <section class="slide" data-slide="1">
+    <div class="anim-child label">Contexto</div>
+    <div class="anim-child title-lg" style="margin-bottom:32px;">Os 5 padroes de criacao GoF</div>
+    <div class="anim-child gof-pattern" style="margin-bottom:36px;">
+      <div class="gof-item">
+        <div style="font-size:12px; font-weight:700; color:var(--muted); margin-bottom:8px;">Singleton</div>
+        <div class="body-sm">Garante uma unica instancia de uma classe</div>
+      </div>
+      <div class="gof-item">
+        <div style="font-size:12px; font-weight:700; color:var(--muted); margin-bottom:8px;">Factory Method</div>
+        <div class="body-sm">Delega a criacao a subclasses especializadas</div>
+      </div>
+      <div class="gof-item">
+        <div style="font-size:12px; font-weight:700; color:var(--muted); margin-bottom:8px;">Abstract Factory</div>
+        <div class="body-sm">Fabrica de familias de objetos relacionados</div>
+      </div>
+      <div class="gof-item selected">
+        <div style="font-size:12px; font-weight:700; color:var(--green); margin-bottom:8px;">Builder</div>
+        <div class="body-sm" style="color:#94a3b8;">Constroi objetos complexos passo a passo</div>
+        <div style="margin-top:8px; font-size:11px; color:var(--green);">← Escolhido</div>
+      </div>
+      <div class="gof-item">
+        <div style="font-size:12px; font-weight:700; color:var(--muted); margin-bottom:8px;">Prototype</div>
+        <div class="body-sm">Cria objetos por clonagem de instancias</div>
+      </div>
+    </div>
+    <hr class="rule anim-child">
+    <div class="anim-child accent-block" style="margin-top:16px;">
+      <p class="body-sm">
+        <strong style="color:var(--text);">Por que Builder para o AgroPlace?</strong><br>
+        Os dominios do sistema possuem objetos com 7 a 14 campos obrigatorios e opcionais. A entidade <code>Anuncio</code> exige 12 parametros — especie, raca, peso, idade, sexo, quantidade, preco, cidade, estado, descricao, conta e titulo. Um construtor convencional se tornaria imediatamente ilegivel e impossivel de validar com seguranca.
+      </p>
+    </div>
+  </section>
+
+  <!-- SLIDE 3: O PROBLEMA -->
+  <section class="slide" data-slide="2">
+    <div class="anim-child label">O Problema</div>
+    <div class="anim-child title-lg" style="margin-bottom:24px;">O anti-padrao: telescoping constructor</div>
+    <div class="anim-child two-col" style="gap:48px; align-items:start;">
+      <div>
+        <p class="body-sm" style="margin-bottom:16px;">Um construtor com 12 parametros na mesma ordem — sem nomes, sem validacao, sem legibilidade:</p>
+        <pre><span class="cm">// ANTI-PADRAO — construtor telescopico</span>
+<span class="kw">new</span> <span class="tp">Anuncio</span>(
+  conta,
+  <span class="str">"Lote Nelore Macho"</span>,
+  <span class="str">"BOVINO"</span>,
+  <span class="str">"Nelore"</span>,
+  <span class="tp">50</span>,
+  <span class="kw">new</span> <span class="tp">BigDecimal</span>(<span class="str">"420.00"</span>),
+  <span class="tp">24</span>,
+  <span class="tp">SexoAnimal.MACHO</span>,
+  <span class="kw">new</span> <span class="tp">BigDecimal</span>(<span class="str">"3800.00"</span>),
+  <span class="str">"Sobral"</span>,
+  <span class="str">"CE"</span>,
+  <span class="str">"Animais vacinados, guia GTA inclusa"</span>
+);</pre>
+      </div>
+      <div class="col-divider">
+        <p class="body-sm" style="margin-bottom:16px;">Consequencias diretas desta abordagem:</p>
+        <div class="def-list">
+          <div class="def-row" style="grid-template-columns:160px 1fr;">
+            <div class="def-term" style="color:#ef4444;">Ilegibilidade</div>
+            <div class="def-desc">Impossivel saber qual argumento e qual campo sem IDE. Parametro 5 e quantidade ou peso?</div>
+          </div>
+          <div class="def-row" style="grid-template-columns:160px 1fr;">
+            <div class="def-term" style="color:#ef4444;">Sem validacao</div>
+            <div class="def-desc">Nenhum ponto central para checar pre-condicoes antes de criar o objeto</div>
+          </div>
+          <div class="def-row" style="grid-template-columns:160px 1fr;">
+            <div class="def-term" style="color:#ef4444;">Acoplamento</div>
+            <div class="def-desc">Toda chamada depende da ordem exata dos parametros — qualquer refatoracao quebra o codigo</div>
+          </div>
+          <div class="def-row" style="grid-template-columns:160px 1fr;">
+            <div class="def-term" style="color:#ef4444;">Campos opcionais</div>
+            <div class="def-desc">Forcado a passar <code>null</code> para campos opcionais como <code>raca</code> e <code>descricao</code></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 4: A SOLUCAO BUILDER -->
+  <section class="slide" data-slide="3">
+    <div class="anim-child label">A Solucao</div>
+    <div class="anim-child title-lg" style="margin-bottom:24px;">Padrao Builder — GoF</div>
+    <div class="anim-child two-col" style="gap:64px; align-items:start;">
+      <div>
+        <div class="label" style="margin-bottom:14px;">Os 4 participantes</div>
+        <div class="participant-list">
+          <div class="participant">
+            <div class="p-name">Builder</div>
+            <div class="p-desc">Interface que declara os metodos de configuracao para cada parte do produto. No AgroPlace: <code>AnuncioBuilder</code>, <code>ContaUsuarioBuilder</code></div>
+          </div>
+          <div class="participant">
+            <div class="p-name">ConcreteBuilder</div>
+            <div class="p-desc">Implementa a interface Builder, acumula o estado e executa a validacao em <code>construir()</code>. Ex: <code>AnuncioConcretoBuilder</code></div>
+          </div>
+          <div class="participant">
+            <div class="p-name">Director</div>
+            <div class="p-desc">Orquestra a sequencia de chamadas ao Builder. Conhece o processo de montagem, nao o objeto resultante. Ex: <code>DiretorAnuncio</code></div>
+          </div>
+          <div class="participant">
+            <div class="p-name">Product</div>
+            <div class="p-desc">O objeto complexo sendo construido. Construtor package-private — so pode ser criado via Builder. Ex: <code>Anuncio</code></div>
+          </div>
+        </div>
+      </div>
+      <div class="col-divider">
+        <div class="label" style="margin-bottom:14px;">Fluxo de criacao</div>
+        <div class="flow-text">
+          <span>Client</span>
+          <span class="arr"> → </span>
+          <span>Director</span>
+          <span class="arr"> → </span>
+          <span>Builder</span>
+          <span class="arr"> → </span>
+          <span>Product</span>
+        </div>
+        <hr class="rule" style="margin:24px 0;">
+        <pre><span class="cm">// No ServicoAnuncioPadrao.java</span>
+<span class="tp">DiretorAnuncio</span> diretor =
+  <span class="kw">new</span> <span class="tp">DiretorAnuncio</span>(
+    <span class="kw">new</span> <span class="tp">AnuncioConcretoBuilder</span>()
+  );
+
+<span class="tp">Anuncio</span> anuncio =
+  diretor.<span class="fn">construirDaRequisicao</span>(
+    conta, req
+  );</pre>
+        <div class="accent-block" style="margin-top:16px;">
+          <p class="body-sm">O servico de aplicacao nao conhece os campos do anuncio — apenas delega ao Diretor, que conhece o processo.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 5: IMPLEMENTACAO ANUNCIO -->
+  <section class="slide" data-slide="4">
+    <div class="anim-child label">Implementacao — Modulo Anuncio</div>
+    <div class="anim-child title-lg" style="margin-bottom:20px;">AnuncioBuilder · DiretorAnuncio</div>
+    <div class="anim-child two-col" style="gap:48px; align-items:start;">
+      <div>
+        <div class="label" style="margin-bottom:10px; font-size:10px;">AnuncioBuilder.java</div>
+        <pre><span class="kw">public interface</span> <span class="tp">AnuncioBuilder</span> {
+  <span class="tp">AnuncioBuilder</span> <span class="fn">conta</span>(<span class="tp">ContaUsuario</span> conta);
+  <span class="tp">AnuncioBuilder</span> <span class="fn">titulo</span>(<span class="tp">String</span> titulo);
+  <span class="tp">AnuncioBuilder</span> <span class="fn">especie</span>(<span class="tp">String</span> especie);
+  <span class="tp">AnuncioBuilder</span> <span class="fn">raca</span>(<span class="tp">String</span> raca);
+  <span class="tp">AnuncioBuilder</span> <span class="fn">quantidade</span>(<span class="kw">int</span> quantidade);
+  <span class="tp">AnuncioBuilder</span> <span class="fn">pesoMedioKg</span>(<span class="tp">BigDecimal</span> v);
+  <span class="tp">AnuncioBuilder</span> <span class="fn">idadeMediaMeses</span>(<span class="tp">Integer</span> v);
+  <span class="tp">AnuncioBuilder</span> <span class="fn">sexo</span>(<span class="tp">SexoAnimal</span> sexo);
+  <span class="tp">AnuncioBuilder</span> <span class="fn">precoUnitario</span>(<span class="tp">BigDecimal</span> v);
+  <span class="tp">AnuncioBuilder</span> <span class="fn">cidade</span>(<span class="tp">String</span> cidade);
+  <span class="tp">AnuncioBuilder</span> <span class="fn">estado</span>(<span class="tp">String</span> estado);
+  <span class="tp">AnuncioBuilder</span> <span class="fn">descricao</span>(<span class="tp">String</span> descricao);
+  <span class="tp">Anuncio</span> <span class="fn">construir</span>();
+}</pre>
+      </div>
+      <div class="col-divider">
+        <div class="label" style="margin-bottom:10px; font-size:10px;">DiretorAnuncio.java</div>
+        <pre><span class="kw">public class</span> <span class="tp">DiretorAnuncio</span> {
+
+  <span class="kw">private final</span> <span class="tp">AnuncioBuilder</span> builder;
+
+  <span class="kw">public</span> <span class="tp">DiretorAnuncio</span>(<span class="tp">AnuncioBuilder</span> b) {
+    <span class="kw">this</span>.builder = b;
+  }
+
+  <span class="kw">public</span> <span class="tp">Anuncio</span> <span class="fn">construirDaRequisicao</span>(
+      <span class="tp">ContaUsuario</span> conta,
+      <span class="tp">RequisicaoAnuncio</span> req) {
+    <span class="kw">return</span> builder
+      .<span class="fn">conta</span>(conta)
+      .<span class="fn">titulo</span>(req.<span class="fn">titulo</span>())
+      .<span class="fn">especie</span>(req.<span class="fn">especie</span>())
+      .<span class="fn">raca</span>(req.<span class="fn">raca</span>())
+      .<span class="fn">quantidade</span>(req.<span class="fn">quantidade</span>())
+      .<span class="fn">pesoMedioKg</span>(req.<span class="fn">pesoMedioKg</span>())
+      .<span class="fn">sexo</span>(req.<span class="fn">sexo</span>())
+      .<span class="fn">precoUnitario</span>(req.<span class="fn">precoUnitario</span>())
+      .<span class="fn">cidade</span>(req.<span class="fn">cidade</span>())
+      .<span class="fn">estado</span>(req.<span class="fn">estado</span>())
+      .<span class="fn">descricao</span>(req.<span class="fn">descricao</span>())
+      .<span class="fn">construir</span>();
+  }
+}</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 6: IMPLEMENTACAO AUTENTICACAO -->
+  <section class="slide" data-slide="5">
+    <div class="anim-child label">Implementacao — Modulo Autenticacao</div>
+    <div class="anim-child title-lg" style="margin-bottom:20px;">ContaUsuarioBuilder · ServicoAutenticacaoPadrao</div>
+    <div class="anim-child two-col" style="gap:48px; align-items:start;">
+      <div>
+        <div class="label" style="margin-bottom:10px; font-size:10px;">ContaUsuarioBuilder.java</div>
+        <pre><span class="kw">public interface</span> <span class="tp">ContaUsuarioBuilder</span> {
+  <span class="tp">ContaUsuarioBuilder</span> <span class="fn">nome</span>(<span class="tp">String</span> nome);
+  <span class="tp">ContaUsuarioBuilder</span> <span class="fn">email</span>(<span class="tp">String</span> email);
+  <span class="tp">ContaUsuarioBuilder</span> <span class="fn">telefone</span>(<span class="tp">String</span> tel);
+  <span class="tp">ContaUsuarioBuilder</span> <span class="fn">documento</span>(<span class="tp">String</span> doc);
+  <span class="tp">ContaUsuarioBuilder</span> <span class="fn">nomeEmpresa</span>(<span class="tp">String</span> ne);
+  <span class="tp">ContaUsuarioBuilder</span> <span class="fn">senhaHash</span>(<span class="tp">String</span> sh);
+  <span class="tp">ContaUsuarioBuilder</span> <span class="fn">tipoConta</span>(<span class="tp">TipoConta</span> t);
+  <span class="tp">ContaUsuario</span> <span class="fn">construir</span>();
+}</pre>
+      </div>
+      <div class="col-divider">
+        <div class="label" style="margin-bottom:10px; font-size:10px;">ServicoAutenticacaoPadrao.java — metodo cadastrar()</div>
+        <pre><span class="tp">DiretorContaUsuario</span> diretor =
+  <span class="kw">new</span> <span class="tp">DiretorContaUsuario</span>(
+    <span class="kw">new</span> <span class="tp">ContaUsuarioConcretoBuilder</span>()
+  );
+
+<span class="tp">ContaUsuario</span> conta =
+  diretor.<span class="fn">construirConta</span>(
+    requisicao.<span class="fn">nome</span>(),
+    requisicao.<span class="fn">email</span>(),
+    requisicao.<span class="fn">telefone</span>(),
+    requisicao.<span class="fn">documento</span>(),
+    nomeEmpresa,
+    codificadorSenha.<span class="fn">encode</span>(
+      requisicao.<span class="fn">senha</span>()
+    ),
+    requisicao.<span class="fn">tipoConta</span>()
+  );
+
+<span class="kw">return</span> montarResposta(
+  repositorio.<span class="fn">save</span>(conta)
+);</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 7: IMPLEMENTACAO PERFIS -->
+  <section class="slide" data-slide="6">
+    <div class="anim-child label">Implementacao — Modulo Perfil</div>
+    <div class="anim-child title-lg" style="margin-bottom:20px;">Tres builders para tres tipos de usuario</div>
+    <div class="anim-child" style="display:grid; grid-template-columns: 1fr 1px 1.6fr; gap:40px; align-items:start;">
+      <div>
+        <div class="label" style="margin-bottom:12px;">Builders de perfil</div>
+        <div class="def-list">
+          <div class="def-row" style="grid-template-columns:1fr; padding:12px 0;">
+            <div class="def-term" style="color:var(--green); font-size:13px;">PerfilProdutorBuilder</div>
+            <div class="def-desc" style="margin-top:4px;">nome_propriedade, CAR, area_hectares, inscricao_estadual, localizacao</div>
+          </div>
+          <div class="def-row" style="grid-template-columns:1fr; padding:12px 0;">
+            <div class="def-term" style="color:var(--green); font-size:13px;">PerfilCorporativaBuilder</div>
+            <div class="def-desc" style="margin-top:4px;">razao_social, CNPJ, segmento, responsavel_comercial, site, localizacao</div>
+          </div>
+          <div class="def-row" style="grid-template-columns:1fr; padding:12px 0;">
+            <div class="def-term" style="color:var(--green); font-size:13px;">PerfilTransportadoraBuilder</div>
+            <div class="def-desc" style="margin-top:4px;">RNTRC, tipos_veiculo, capacidade_carga_kg, possui_transporte_vivo, localizacao</div>
+          </div>
+        </div>
+      </div>
+      <div style="background: var(--divider);"></div>
+      <div>
+        <div class="label" style="margin-bottom:10px; font-size:10px;">PerfilCorporativaConcretoBuilder.java — validar()</div>
+        <pre><span class="kw">private void</span> <span class="fn">validar</span>() {
+  <span class="kw">if</span> (conta == <span class="kw">null</span>)
+    <span class="kw">throw new</span> <span class="tp">IllegalStateException</span>(
+      <span class="str">"Conta e obrigatoria"</span>);
+  <span class="kw">if</span> (razaoSocial == <span class="kw">null</span>
+      || razaoSocial.<span class="fn">isBlank</span>())
+    <span class="kw">throw new</span> <span class="tp">IllegalStateException</span>(
+      <span class="str">"Razao social e obrigatoria"</span>);
+  <span class="kw">if</span> (cnpj == <span class="kw">null</span>
+      || cnpj.<span class="fn">isBlank</span>())
+    <span class="kw">throw new</span> <span class="tp">IllegalStateException</span>(
+      <span class="str">"CNPJ e obrigatorio"</span>);
+  <span class="kw">if</span> (cidade == <span class="kw">null</span>
+      || cidade.<span class="fn">isBlank</span>())
+    <span class="kw">throw new</span> <span class="tp">IllegalStateException</span>(
+      <span class="str">"Cidade e obrigatoria"</span>);
+  <span class="kw">if</span> (estado == <span class="kw">null</span>
+      || estado.<span class="fn">length</span>() != <span class="tp">2</span>)
+    <span class="kw">throw new</span> <span class="tp">IllegalStateException</span>(
+      <span class="str">"Estado invalido"</span>);
+}</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 8: SOLID -->
+  <section class="slide" data-slide="7">
+    <div class="anim-child label">Principios SOLID</div>
+    <div class="anim-child title-lg" style="margin-bottom:28px;">Como o Builder aplica SOLID</div>
+    <div class="anim-child">
+      <table class="data-table">
+        <thead>
+          <tr><th>Principio</th><th>Como o Builder aplica</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>S — SRP</td>
+            <td>O Builder cuida exclusivamente da montagem e validacao do objeto. O servico de aplicacao cuida da regra de negocio. Responsabilidades claramente separadas.</td>
+          </tr>
+          <tr>
+            <td>O — OCP</td>
+            <td>Para adicionar um novo campo em <code>Anuncio</code>, basta acrescentar um metodo na interface <code>AnuncioBuilder</code> e implementar no <code>AnuncioConcretoBuilder</code> — sem alterar o Diretor ou o servico.</td>
+          </tr>
+          <tr>
+            <td>L — LSP</td>
+            <td><code>AnuncioConcretoBuilder</code> e qualquer outro ConcreteBuilder sao substituiveis entre si sem quebrar o comportamento do <code>DiretorAnuncio</code> — que depende apenas da interface.</td>
+          </tr>
+          <tr>
+            <td>I — ISP</td>
+            <td>Cada interface de Builder declara apenas os metodos relevantes ao seu produto. <code>ContaUsuarioBuilder</code> nao tem metodos de <code>AnuncioBuilder</code> — interfaces enxutas e especificas.</td>
+          </tr>
+          <tr>
+            <td>D — DIP</td>
+            <td><code>DiretorAnuncio</code> depende da abstracao <code>AnuncioBuilder</code> (interface), nao da implementacao concreta. O ConcreteBuilder e injetado no construtor do Diretor.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- SLIDE 9: ANTES E DEPOIS -->
+  <section class="slide" data-slide="8">
+    <div class="anim-child label">Resultado</div>
+    <div class="anim-child title-lg" style="margin-bottom:32px;">Antes e depois</div>
+    <div class="anim-child ba-grid">
+      <div>
+        <div class="label" style="color:#ef4444; margin-bottom:14px;">Antes — Telescoping Constructor</div>
+        <pre style="font-size:11px;"><span class="cm">// 12 argumentos posicionais</span>
+<span class="cm">// Zero validacao de pre-condicoes</span>
+<span class="cm">// Construtor publico — qualquer</span>
+<span class="cm">// codigo pode criar Anuncio invalido</span>
+
+<span class="kw">new</span> <span class="tp">Anuncio</span>(
+  conta, titulo, especie,
+  raca, quantidade, peso,
+  idade, sexo, preco,
+  cidade, estado, descricao
+);</pre>
+        <div style="margin-top:12px;">
+          <div class="bad-item">Sem validacao de campos obrigatorios</div>
+          <div class="bad-item">Ordem dos parametros causa bugs silenciosos</div>
+          <div class="bad-item">Campos opcionais forcam <code>null</code> explicito</div>
+          <div class="bad-item">Teste unitario legivel apenas com IDE</div>
+        </div>
+      </div>
+      <div class="ba-divider-line"></div>
+      <div>
+        <div class="label" style="color:var(--green); margin-bottom:14px;">Depois — Builder + Diretor</div>
+        <pre style="font-size:11px;"><span class="cm">// Diretor encapsula o processo</span>
+<span class="cm">// validar() em construir()</span>
+<span class="cm">// Construtor de Anuncio e</span>
+<span class="cm">// package-private</span>
+
+diretor.<span class="fn">construirDaRequisicao</span>(
+  conta, req
+);
+
+<span class="cm">// Internamente, fluent chain:</span>
+builder.<span class="fn">conta</span>(conta)
+       .<span class="fn">titulo</span>(req.<span class="fn">titulo</span>())
+       ...
+       .<span class="fn">construir</span>();</pre>
+        <div style="margin-top:12px;">
+          <div class="good-item">Validacao centralizada em <code>validar()</code></div>
+          <div class="good-item">Campos nomeados — legibilidade total</div>
+          <div class="good-item">Campos opcionais simplesmente omitidos</div>
+          <div class="good-item">Objeto invalido nunca sai do Builder</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 10: CONCLUSAO -->
+  <section class="slide" data-slide="9">
+    <div class="anim-child label">Conclusao</div>
+    <div class="anim-child title-lg" style="margin-bottom:32px;">O que o Builder resolve no AgroPlace</div>
+    <div class="anim-child two-col" style="gap:64px; align-items:start;">
+      <div>
+        <div class="def-list">
+          <div class="def-row" style="grid-template-columns:1fr; padding:16px 0;">
+            <div class="def-term" style="font-size:14px; color:var(--green);">Telescoping constructor eliminado</div>
+            <div class="def-desc" style="margin-top:6px;">Os 3 modulos (anuncio, autenticacao, perfil) criavam objetos com 7–14 parametros. Builder substitui por uma API fluente nomeada.</div>
+          </div>
+          <div class="def-row" style="grid-template-columns:1fr; padding:16px 0;">
+            <div class="def-term" style="font-size:14px; color:var(--green);">Validacao no momento da construcao</div>
+            <div class="def-desc" style="margin-top:6px;">O metodo <code>validar()</code> do ConcreteBuilder garante que nenhum objeto invalido chega ao repositorio — fail-fast antes do <code>save()</code>.</div>
+          </div>
+          <div class="def-row" style="grid-template-columns:1fr; padding:16px 0;">
+            <div class="def-term" style="font-size:14px; color:var(--green);">Extensivel sem modificacao</div>
+            <div class="def-desc" style="margin-top:6px;">Novos campos podem ser adicionados implementando novos ConcreteBuilders sem alterar o Diretor ou o servico — Open/Closed Principle.</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-divider">
+        <div class="label" style="margin-bottom:16px;">Resumo numerico</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0; margin-bottom:24px;">
+          <div style="padding:16px 16px 16px 0; border-right: 1px solid var(--divider); border-bottom: 1px solid var(--divider);">
+            <div style="font-size:32px; font-weight:800; color:var(--green);">3</div>
+            <div class="body-sm">modulos com Builder</div>
+          </div>
+          <div style="padding:16px; border-bottom: 1px solid var(--divider);">
+            <div style="font-size:32px; font-weight:800; color:var(--green);">6</div>
+            <div class="body-sm">classes Builder (3 interfaces + 3 concretas)</div>
+          </div>
+          <div style="padding:16px 16px 16px 0; border-right: 1px solid var(--divider);">
+            <div style="font-size:32px; font-weight:800; color:var(--green);">3</div>
+            <div class="body-sm">classes Diretor</div>
+          </div>
+          <div style="padding:16px;">
+            <div style="font-size:32px; font-weight:800; color:var(--green);">5</div>
+            <div class="body-sm">principios SOLID atendidos</div>
+          </div>
+        </div>
+        <div class="accent-block">
+          <p class="body-sm">O padrao Builder e a escolha natural quando um objeto requer muitos parametros de inicializacao, quando alguns sao opcionais, e quando a validade do estado e uma pre-condicao critica antes da persistencia.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<div id="controls">
+  <button class="ctrl-btn" id="prev-btn">Anterior</button>
+  <span id="slide-counter">1 / 10</span>
+  <button class="ctrl-btn" id="next-btn">Proximo</button>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  let current = 0;
+  const progressBar = document.getElementById('progress-bar');
+  const counter = document.getElementById('slide-counter');
+  const dotNav = document.getElementById('dot-nav');
+
+  slides.forEach((_, i) => {
+    const dot = document.createElement('div');
+    dot.className = 'dot' + (i === 0 ? ' active' : '');
+    dot.addEventListener('click', () => goTo(i));
+    dotNav.appendChild(dot);
+  });
+
+  function goTo(n) {
+    slides[current].classList.remove('active');
+    dotNav.children[current].classList.remove('active');
+    current = Math.max(0, Math.min(n, total - 1));
+    slides[current].classList.add('active');
+    dotNav.children[current].classList.add('active');
+    progressBar.style.width = ((current + 1) / total * 100) + '%';
+    counter.textContent = (current + 1) + ' / ' + total;
+  }
+
+  document.getElementById('prev-btn').addEventListener('click', () => goTo(current - 1));
+  document.getElementById('next-btn').addEventListener('click', () => goTo(current + 1));
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') goTo(current + 1);
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') goTo(current - 1);
+  });
+  goTo(0);
+</script>
+</body>
+</html>

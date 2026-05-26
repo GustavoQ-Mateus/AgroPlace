@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgroPlace — Banco de Dados</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0f1e;
+    --green: #22c55e;
+    --text: #f0f4f8;
+    --muted: #64748b;
+    --border: #1e2d40;
+    --divider: #1a2540;
+    --code-bg: #0d1117;
+  }
+
+  html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; }
+
+  #progress-bar { position: fixed; top: 0; left: 0; height: 2px; background: var(--green); transition: width 0.4s ease; z-index: 100; }
+  #dot-nav { position: fixed; right: 24px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 8px; z-index: 100; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); cursor: pointer; transition: all 0.3s; }
+  .dot.active { background: var(--green); transform: scale(1.5); }
+
+  #controls { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 24px; z-index: 100; }
+  .ctrl-btn { background: none; border: 1px solid var(--border); color: var(--muted); padding: 8px 20px; cursor: pointer; font-size: 13px; letter-spacing: 0.05em; transition: all 0.2s; }
+  .ctrl-btn:hover { border-color: var(--green); color: var(--green); }
+  #slide-counter { font-size: 12px; color: var(--muted); letter-spacing: 0.1em; min-width: 60px; text-align: center; }
+
+  #deck { width: 100%; height: 100%; position: relative; }
+  .slide { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; padding: 52px 96px 80px; opacity: 0; pointer-events: none; transition: opacity 0.5s ease; }
+  .slide.active { opacity: 1; pointer-events: all; }
+  .slide.active .anim-child { animation: fadeUp 0.6s ease both; }
+  .slide.active .anim-child:nth-child(2) { animation-delay: 0.08s; }
+  .slide.active .anim-child:nth-child(3) { animation-delay: 0.16s; }
+  .slide.active .anim-child:nth-child(4) { animation-delay: 0.24s; }
+  .slide.active .anim-child:nth-child(5) { animation-delay: 0.32s; }
+  .slide.active .anim-child:nth-child(6) { animation-delay: 0.40s; }
+  .slide.active .anim-child:nth-child(7) { animation-delay: 0.48s; }
+
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+
+  .label { font-size: 11px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; color: var(--green); margin-bottom: 14px; }
+  .title-xl { font-size: clamp(32px, 4.5vw, 58px); font-weight: 700; line-height: 1.05; letter-spacing: -0.02em; }
+  .title-lg { font-size: clamp(22px, 3vw, 40px); font-weight: 700; line-height: 1.1; letter-spacing: -0.02em; }
+  .body { font-size: 15px; line-height: 1.7; color: #cbd5e1; }
+  .body-sm { font-size: 13px; line-height: 1.6; color: #94a3b8; }
+  .rule { border: none; border-top: 1px solid var(--divider); margin: 20px 0; }
+  .rule-green { border: none; border-top: 1px solid var(--green); margin: 24px 0; width: 48px; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0; }
+  .col-divider { border-left: 1px solid var(--divider); padding-left: 40px; }
+  .col-divider-mid { border-left: 1px solid var(--divider); padding-left: 40px; padding-right: 40px; }
+
+  .data-table { width: 100%; border-collapse: collapse; }
+  .data-table th { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); padding: 10px 0; border-bottom: 1px solid var(--green); text-align: left; }
+  .data-table td { padding: 10px 0; border-bottom: 1px solid var(--divider); font-size: 12px; color: #cbd5e1; vertical-align: top; padding-right: 12px; }
+  .data-table td:first-child { color: var(--text); font-weight: 600; font-family: 'Courier New', monospace; font-size: 12px; }
+  .data-table td.type { color: #4ec9b0; font-family: 'Courier New', monospace; font-size: 11px; }
+  .data-table td.constraint { color: #c586c0; font-size: 11px; }
+
+  .def-list { display: flex; flex-direction: column; }
+  .def-row { display: grid; grid-template-columns: 220px 1fr; padding: 12px 0; border-bottom: 1px solid var(--divider); align-items: start; }
+  .def-row:first-child { border-top: 1px solid var(--divider); }
+  .def-term { font-size: 12px; font-weight: 600; color: var(--text); font-family: 'Courier New', monospace; }
+  .def-desc { font-size: 12px; color: #94a3b8; line-height: 1.5; }
+
+  .accent-block { border-left: 3px solid var(--green); padding-left: 18px; margin: 12px 0; }
+  .cover-tag { font-size: 11px; letter-spacing: 0.25em; text-transform: uppercase; color: var(--green); margin-bottom: 32px; display: flex; align-items: center; gap: 12px; }
+  .cover-tag::after { content: ''; flex: 1; height: 1px; background: var(--green); opacity: 0.3; }
+
+  code { font-family: 'Courier New', monospace; font-size: 12px; color: #94a3b8; }
+
+  /* TREE */
+  .tree { font-family: 'Courier New', monospace; font-size: 13px; line-height: 2.2; color: #94a3b8; }
+  .tree .domain { color: var(--text); font-weight: 700; }
+  .tree .tbl { color: var(--green); }
+  .tree .meta { color: var(--muted); font-size: 11px; }
+
+  /* FK ARROWS */
+  .fk-list { display: flex; flex-direction: column; gap: 0; }
+  .fk-row { display: grid; grid-template-columns: 220px 40px 220px 1fr; padding: 12px 0; border-bottom: 1px solid var(--divider); align-items: center; font-size: 13px; }
+  .fk-row:first-child { border-top: 1px solid var(--divider); }
+  .fk-parent { color: var(--text); font-family: 'Courier New', monospace; font-size: 12px; }
+  .fk-arrow { color: var(--green); text-align: center; font-size: 16px; }
+  .fk-child { color: #94a3b8; font-family: 'Courier New', monospace; font-size: 12px; }
+  .fk-action { font-size: 11px; color: var(--muted); }
+
+  /* PROFILE COLS */
+  .profile-col { border-right: 1px solid var(--divider); padding-right: 32px; }
+  .profile-col:last-child { border-right: none; padding-right: 0; padding-left: 32px; }
+  .profile-col:nth-child(2) { padding-left: 32px; }
+  .col-field { padding: 8px 0; border-bottom: 1px solid var(--divider); font-size: 12px; font-family: 'Courier New', monospace; }
+  .col-field .fname { color: var(--text); }
+  .col-field .ftype { color: #4ec9b0; margin-left: 8px; font-size: 11px; }
+  .col-field .fconst { color: #c586c0; margin-left: 6px; font-size: 10px; }
+
+  /* STAT BOXES */
+  .stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; }
+  .stat-item { padding: 16px 0; border-right: 1px solid var(--divider); padding-right: 24px; padding-left: 24px; }
+  .stat-item:first-child { padding-left: 0; }
+  .stat-item:last-child { border-right: none; }
+  .stat-num { font-size: 36px; font-weight: 800; color: var(--green); }
+  .stat-label { font-size: 11px; color: var(--muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.08em; }
+</style>
+</head>
+<body>
+
+<div id="progress-bar"></div>
+<div id="dot-nav"></div>
+
+<div id="deck">
+
+  <!-- SLIDE 1: COVER -->
+  <section class="slide active" data-slide="0">
+    <div class="anim-child cover-tag">AgroPlace &nbsp;&middot;&nbsp; Banco de Dados MySQL &nbsp;&middot;&nbsp; UNIFOR 2026.1</div>
+    <div class="anim-child title-xl">Modelagem e Implementacao<br>do Banco de Dados</div>
+    <hr class="rule-green anim-child" style="margin-top:28px;">
+    <p class="body anim-child" style="max-width:560px; margin-top:16px; font-style:italic; color:#94a3b8;">Ambiente de Dados — Disciplina</p>
+    <div class="anim-child" style="margin-top:40px; display:flex; gap:48px; flex-wrap:wrap;">
+      <div><div class="label">SGBD</div><div class="body-sm">MySQL 8.0+</div></div>
+      <div><div class="label">Storage Engine</div><div class="body-sm">InnoDB</div></div>
+      <div><div class="label">Charset</div><div class="body-sm">utf8mb4 / utf8mb4_unicode_ci</div></div>
+      <div><div class="label">Tabelas</div><div class="body-sm">12 tabelas de producao</div></div>
+    </div>
+  </section>
+
+  <!-- SLIDE 2: VISAO GERAL -->
+  <section class="slide" data-slide="1">
+    <div class="anim-child label">Visao Geral</div>
+    <div class="anim-child title-lg" style="margin-bottom:28px;">12 tabelas em 4 dominios</div>
+    <div class="anim-child two-col" style="gap:64px; align-items:start;">
+      <div>
+        <div class="tree">
+          <div><span class="domain">agroplace</span> <span class="meta">(database)</span></div>
+          <div style="padding-left:16px;">|</div>
+          <div style="padding-left:16px;">+-- <span class="domain">Autenticacao</span></div>
+          <div style="padding-left:32px;">|   +-- <span class="tbl">contas_usuario</span></div>
+          <div style="padding-left:16px;">|</div>
+          <div style="padding-left:16px;">+-- <span class="domain">Perfis</span></div>
+          <div style="padding-left:32px;">|   +-- <span class="tbl">perfis_produtor</span></div>
+          <div style="padding-left:32px;">|   +-- <span class="tbl">perfis_corporativa</span></div>
+          <div style="padding-left:32px;">|   +-- <span class="tbl">perfis_transportadora</span></div>
+          <div style="padding-left:32px;">|   +-- <span class="tbl">regioes_atendimento_transportadora</span></div>
+          <div style="padding-left:16px;">|</div>
+          <div style="padding-left:16px;">+-- <span class="domain">Comercio</span></div>
+          <div style="padding-left:32px;">|   +-- <span class="tbl">anuncios</span></div>
+          <div style="padding-left:32px;">|   +-- <span class="tbl">fotos_anuncio</span></div>
+          <div style="padding-left:32px;">|   +-- <span class="tbl">propostas</span></div>
+          <div style="padding-left:16px;">|</div>
+          <div style="padding-left:16px;">+-- <span class="domain">Logistica</span></div>
+          <div style="padding-left:32px;">    +-- <span class="tbl">solicitacoes_frete</span></div>
+          <div style="padding-left:32px;">    +-- <span class="tbl">cotacoes_frete</span></div>
+        </div>
+      </div>
+      <div class="col-divider">
+        <div class="label" style="margin-bottom:16px;">Caracteristicas tecnicas</div>
+        <div class="def-list">
+          <div class="def-row" style="grid-template-columns:160px 1fr;">
+            <div class="def-term">PRIMARY KEY</div>
+            <div class="def-desc">BIGINT UNSIGNED AUTO_INCREMENT em todas as tabelas</div>
+          </div>
+          <div class="def-row" style="grid-template-columns:160px 1fr;">
+            <div class="def-term">Auditoria</div>
+            <div class="def-desc"><code>criado_em</code> e <code>atualizado_em</code> DATETIME com DEFAULT e ON UPDATE CURRENT_TIMESTAMP</div>
+          </div>
+          <div class="def-row" style="grid-template-columns:160px 1fr;">
+            <div class="def-term">ENUMs</div>
+            <div class="def-desc">SexoAnimal, StatusAnuncio, StatusProposta, StatusFrete, StatusCotacao, TipoConta</div>
+          </div>
+          <div class="def-row" style="grid-template-columns:160px 1fr;">
+            <div class="def-term">Integridade</div>
+            <div class="def-desc">10 FOREIGN KEY constraints com ON DELETE CASCADE ou RESTRICT</div>
+          </div>
+          <div class="def-row" style="grid-template-columns:160px 1fr;">
+            <div class="def-term">Indices</div>
+            <div class="def-desc">14 indices adicionais para filtros de listagem, status e pesquisa por estado</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 3: AUTENTICACAO -->
+  <section class="slide" data-slide="2">
+    <div class="anim-child label">Dominio de Autenticacao</div>
+    <div class="anim-child title-lg" style="margin-bottom:24px;">contas_usuario — tabela raiz do sistema</div>
+    <div class="anim-child">
+      <table class="data-table">
+        <thead>
+          <tr><th>Coluna</th><th>Tipo</th><th>Constraint</th><th>Descricao</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>id</td><td class="type">BIGINT UNSIGNED</td><td class="constraint">PK, AUTO_INCREMENT</td><td>Identificador unico da conta</td></tr>
+          <tr><td>nome</td><td class="type">VARCHAR(160)</td><td class="constraint">NOT NULL</td><td>Nome completo do usuario</td></tr>
+          <tr><td>email</td><td class="type">VARCHAR(180)</td><td class="constraint">NOT NULL, UNIQUE</td><td>Login unico — uk_contas_email</td></tr>
+          <tr><td>telefone</td><td class="type">VARCHAR(32)</td><td class="constraint">NOT NULL</td><td>Telefone de contato</td></tr>
+          <tr><td>documento</td><td class="type">VARCHAR(32)</td><td class="constraint">NOT NULL, UNIQUE</td><td>CPF (PRODUTOR) ou CNPJ — uk_contas_documento</td></tr>
+          <tr><td>nome_empresa</td><td class="type">VARCHAR(180)</td><td class="constraint">NULL</td><td>Apenas para CORPORATIVA e TRANSPORTADORA</td></tr>
+          <tr><td>senha_hash</td><td class="type">VARCHAR(255)</td><td class="constraint">NOT NULL</td><td>BCrypt hash — Spring Security PasswordEncoder</td></tr>
+          <tr><td>tipo_conta</td><td class="type">ENUM</td><td class="constraint">NOT NULL</td><td>'PRODUTOR' | 'CORPORATIVA' | 'TRANSPORTADORA'</td></tr>
+          <tr><td>ativo</td><td class="type">BOOLEAN</td><td class="constraint">DEFAULT TRUE</td><td>Soft delete — conta inativa nao faz login</td></tr>
+          <tr><td>criado_em</td><td class="type">DATETIME</td><td class="constraint">DEFAULT NOW()</td><td>Timestamp de criacao</td></tr>
+          <tr><td>atualizado_em</td><td class="type">DATETIME</td><td class="constraint">ON UPDATE NOW()</td><td>Timestamp de ultima atualizacao</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- SLIDE 4: PERFIS -->
+  <section class="slide" data-slide="3">
+    <div class="anim-child label">Perfis de Usuario</div>
+    <div class="anim-child title-lg" style="margin-bottom:24px;">Um perfil por tipo — relacao 1:1 com contas_usuario</div>
+    <div class="anim-child three-col" style="gap:0; align-items:start;">
+      <div class="profile-col">
+        <div class="label" style="margin-bottom:12px; font-size:10px;">perfis_produtor</div>
+        <div class="col-field"><span class="fname">id</span><span class="ftype">BIGINT</span><span class="fconst">PK</span></div>
+        <div class="col-field"><span class="fname">conta_usuario_id</span><span class="ftype">BIGINT</span><span class="fconst">FK UNIQUE</span></div>
+        <div class="col-field"><span class="fname">nome_propriedade</span><span class="ftype">VARCHAR(180)</span><span class="fconst">NOT NULL</span></div>
+        <div class="col-field"><span class="fname">documento_rural</span><span class="ftype">VARCHAR(60)</span></div>
+        <div class="col-field"><span class="fname">inscricao_estadual</span><span class="ftype">VARCHAR(60)</span></div>
+        <div class="col-field"><span class="fname">car</span><span class="ftype">VARCHAR(80)</span></div>
+        <div class="col-field"><span class="fname">area_hectares</span><span class="ftype">DECIMAL(10,2)</span></div>
+        <div class="col-field"><span class="fname">cep</span><span class="ftype">VARCHAR(12)</span></div>
+        <div class="col-field"><span class="fname">endereco</span><span class="ftype">VARCHAR(220)</span></div>
+        <div class="col-field"><span class="fname">cidade</span><span class="ftype">VARCHAR(120)</span><span class="fconst">NOT NULL</span></div>
+        <div class="col-field"><span class="fname">estado</span><span class="ftype">CHAR(2)</span><span class="fconst">NOT NULL</span></div>
+        <div class="col-field"><span class="fname">descricao</span><span class="ftype">TEXT</span></div>
+      </div>
+      <div class="profile-col">
+        <div class="label" style="margin-bottom:12px; font-size:10px;">perfis_corporativa</div>
+        <div class="col-field"><span class="fname">id</span><span class="ftype">BIGINT</span><span class="fconst">PK</span></div>
+        <div class="col-field"><span class="fname">conta_usuario_id</span><span class="ftype">BIGINT</span><span class="fconst">FK UNIQUE</span></div>
+        <div class="col-field"><span class="fname">razao_social</span><span class="ftype">VARCHAR(180)</span><span class="fconst">NOT NULL</span></div>
+        <div class="col-field"><span class="fname">nome_fantasia</span><span class="ftype">VARCHAR(180)</span></div>
+        <div class="col-field"><span class="fname">cnpj</span><span class="ftype">VARCHAR(20)</span><span class="fconst">NOT NULL UNIQUE</span></div>
+        <div class="col-field"><span class="fname">inscricao_estadual</span><span class="ftype">VARCHAR(60)</span></div>
+        <div class="col-field"><span class="fname">segmento</span><span class="ftype">VARCHAR(120)</span></div>
+        <div class="col-field"><span class="fname">responsavel_comercial</span><span class="ftype">VARCHAR(160)</span></div>
+        <div class="col-field"><span class="fname">telefone_comercial</span><span class="ftype">VARCHAR(32)</span></div>
+        <div class="col-field"><span class="fname">site</span><span class="ftype">VARCHAR(180)</span></div>
+        <div class="col-field"><span class="fname">cidade</span><span class="ftype">VARCHAR(120)</span><span class="fconst">NOT NULL</span></div>
+        <div class="col-field"><span class="fname">estado</span><span class="ftype">CHAR(2)</span><span class="fconst">NOT NULL</span></div>
+      </div>
+      <div class="profile-col">
+        <div class="label" style="margin-bottom:12px; font-size:10px;">perfis_transportadora</div>
+        <div class="col-field"><span class="fname">id</span><span class="ftype">BIGINT</span><span class="fconst">PK</span></div>
+        <div class="col-field"><span class="fname">conta_usuario_id</span><span class="ftype">BIGINT</span><span class="fconst">FK UNIQUE</span></div>
+        <div class="col-field"><span class="fname">razao_social</span><span class="ftype">VARCHAR(180)</span><span class="fconst">NOT NULL</span></div>
+        <div class="col-field"><span class="fname">cnpj</span><span class="ftype">VARCHAR(20)</span><span class="fconst">NOT NULL UNIQUE</span></div>
+        <div class="col-field"><span class="fname">rntrc</span><span class="ftype">VARCHAR(40)</span></div>
+        <div class="col-field"><span class="fname">responsavel_operacional</span><span class="ftype">VARCHAR(160)</span></div>
+        <div class="col-field"><span class="fname">tipos_veiculo</span><span class="ftype">VARCHAR(255)</span></div>
+        <div class="col-field"><span class="fname">capacidade_carga_kg</span><span class="ftype">DECIMAL(10,2)</span></div>
+        <div class="col-field"><span class="fname">possui_transporte_vivo</span><span class="ftype">BOOLEAN</span><span class="fconst">DEFAULT TRUE</span></div>
+        <div class="col-field"><span class="fname">cidade</span><span class="ftype">VARCHAR(120)</span><span class="fconst">NOT NULL</span></div>
+        <div class="col-field"><span class="fname">estado</span><span class="ftype">CHAR(2)</span><span class="fconst">NOT NULL</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 5: ANUNCIOS -->
+  <section class="slide" data-slide="4">
+    <div class="anim-child label">Dominio de Anuncios</div>
+    <div class="anim-child title-lg" style="margin-bottom:20px;">anuncios + fotos_anuncio</div>
+    <div class="anim-child two-col" style="gap:48px; align-items:start;">
+      <div>
+        <div class="label" style="margin-bottom:12px; font-size:10px;">anuncios</div>
+        <table class="data-table">
+          <thead><tr><th>Coluna</th><th>Tipo</th><th>Notas</th></tr></thead>
+          <tbody>
+            <tr><td>id</td><td class="type">BIGINT UNSIGNED</td><td>PK AUTO_INCREMENT</td></tr>
+            <tr><td>conta_usuario_id</td><td class="type">BIGINT UNSIGNED</td><td>FK — publicador (PRODUTOR)</td></tr>
+            <tr><td>titulo</td><td class="type">VARCHAR(200)</td><td>NOT NULL</td></tr>
+            <tr><td>especie</td><td class="type">VARCHAR(60)</td><td>BOVINO, EQUINO, SUINO, AVE, OVINO, CAPRINO</td></tr>
+            <tr><td>raca</td><td class="type">VARCHAR(120)</td><td>Opcional</td></tr>
+            <tr><td>quantidade</td><td class="type">INT</td><td>NOT NULL &gt;= 1</td></tr>
+            <tr><td>peso_medio_kg</td><td class="type">DECIMAL(8,2)</td><td>Opcional</td></tr>
+            <tr><td>idade_media_meses</td><td class="type">INT</td><td>Opcional</td></tr>
+            <tr><td>sexo</td><td class="type">ENUM</td><td>'MACHO' | 'FEMEA' | 'MISTO'</td></tr>
+            <tr><td>preco_unitario</td><td class="type">DECIMAL(12,2)</td><td>NOT NULL, positivo</td></tr>
+            <tr><td>status</td><td class="type">ENUM</td><td>'ATIVO' | 'PAUSADO' | 'VENDIDO' | 'CANCELADO'</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="col-divider">
+        <div class="label" style="margin-bottom:12px; font-size:10px;">fotos_anuncio</div>
+        <table class="data-table" style="margin-bottom:24px;">
+          <thead><tr><th>Coluna</th><th>Tipo</th><th>Notas</th></tr></thead>
+          <tbody>
+            <tr><td>id</td><td class="type">BIGINT UNSIGNED</td><td>PK</td></tr>
+            <tr><td>anuncio_id</td><td class="type">BIGINT UNSIGNED</td><td>FK — ON DELETE CASCADE</td></tr>
+            <tr><td>url</td><td class="type">VARCHAR(500)</td><td>URL publica Supabase Storage</td></tr>
+            <tr><td>principal</td><td class="type">BOOLEAN</td><td>DEFAULT FALSE — foto de capa</td></tr>
+          </tbody>
+        </table>
+        <div class="label" style="margin-bottom:12px;">ENUMs notaveis</div>
+        <div class="def-list">
+          <div class="def-row" style="grid-template-columns:140px 1fr;">
+            <div class="def-term">SexoAnimal</div>
+            <div class="def-desc">MACHO — FEMEA — MISTO. Campo obrigatorio — Builder valida <code>sexo != null</code></div>
+          </div>
+          <div class="def-row" style="grid-template-columns:140px 1fr;">
+            <div class="def-term">StatusAnuncio</div>
+            <div class="def-desc">ATIVO (DEFAULT) — PAUSADO — VENDIDO — CANCELADO. Transicao controlada pelo servico</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 6: COMERCIO -->
+  <section class="slide" data-slide="5">
+    <div class="anim-child label">Dominio de Comercio</div>
+    <div class="anim-child title-lg" style="margin-bottom:20px;">propostas — fluxo de negociacao</div>
+    <div class="anim-child two-col" style="gap:48px; align-items:start;">
+      <div>
+        <div class="label" style="margin-bottom:12px; font-size:10px;">propostas</div>
+        <table class="data-table">
+          <thead><tr><th>Coluna</th><th>Tipo</th><th>Notas</th></tr></thead>
+          <tbody>
+            <tr><td>id</td><td class="type">BIGINT UNSIGNED</td><td>PK</td></tr>
+            <tr><td>anuncio_id</td><td class="type">BIGINT UNSIGNED</td><td>FK fk_propostas_anuncio</td></tr>
+            <tr><td>conta_usuario_id</td><td class="type">BIGINT UNSIGNED</td><td>FK — comprador (CORPORATIVA)</td></tr>
+            <tr><td>valor_proposto</td><td class="type">DECIMAL(12,2)</td><td>NOT NULL</td></tr>
+            <tr><td>mensagem</td><td class="type">TEXT</td><td>Justificativa da proposta</td></tr>
+            <tr><td>status</td><td class="type">ENUM</td><td>'AGUARDANDO' | 'ACEITA' | 'RECUSADA' | 'CANCELADA'</td></tr>
+            <tr><td>criado_em</td><td class="type">DATETIME</td><td>DEFAULT NOW()</td></tr>
+            <tr><td>atualizado_em</td><td class="type">DATETIME</td><td>ON UPDATE NOW()</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="col-divider">
+        <div class="label" style="margin-bottom:16px;">Fluxo de estados</div>
+        <div style="font-family: 'Courier New', monospace; font-size: 13px; line-height: 2.5; color: #94a3b8; margin-bottom:24px;">
+          <div>Comprador cria &rarr; <span style="color:var(--green);">AGUARDANDO</span></div>
+          <div style="padding-left:24px;">|</div>
+          <div style="padding-left:24px;">+-- Produtor aceita &rarr; <span style="color:var(--green);">ACEITA</span></div>
+          <div style="padding-left:24px;">|</div>
+          <div style="padding-left:24px;">+-- Produtor recusa &rarr; <span style="color:#ef4444;">RECUSADA</span></div>
+          <div style="padding-left:24px;">|</div>
+          <div style="padding-left:24px;">+-- Comprador cancela &rarr; <span style="color:var(--muted);">CANCELADA</span></div>
+        </div>
+        <div class="accent-block">
+          <p class="body-sm">
+            Proposta ACEITA: o <code>status</code> do anuncio correspondente e atualizado para VENDIDO pelo servico de aplicacao. As demais propostas do mesmo anuncio sao automaticamente CANCELADAS.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 7: LOGISTICA -->
+  <section class="slide" data-slide="6">
+    <div class="anim-child label">Dominio de Logistica</div>
+    <div class="anim-child title-lg" style="margin-bottom:20px;">solicitacoes_frete &rarr; cotacoes_frete</div>
+    <div class="anim-child two-col" style="gap:48px; align-items:start;">
+      <div>
+        <div class="label" style="margin-bottom:12px; font-size:10px;">solicitacoes_frete</div>
+        <table class="data-table">
+          <thead><tr><th>Coluna</th><th>Tipo</th></tr></thead>
+          <tbody>
+            <tr><td>id</td><td class="type">PK BIGINT</td></tr>
+            <tr><td>anuncio_id</td><td class="type">FK — anuncio do lote</td></tr>
+            <tr><td>conta_usuario_id</td><td class="type">FK — solicitante</td></tr>
+            <tr><td>perfil_transportadora_id</td><td class="type">FK NULL — transportadora escolhida</td></tr>
+            <tr><td>origem_cidade / estado</td><td class="type">VARCHAR + CHAR(2)</td></tr>
+            <tr><td>destino_cidade / estado</td><td class="type">VARCHAR + CHAR(2)</td></tr>
+            <tr><td>quantidade_cabecas</td><td class="type">INT NOT NULL</td></tr>
+            <tr><td>data_retirada</td><td class="type">DATE NULL</td></tr>
+            <tr><td>status</td><td class="type">ABERTA | COTANDO | CONFIRMADA | CONCLUIDA | CANCELADA</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="col-divider">
+        <div class="label" style="margin-bottom:12px; font-size:10px;">cotacoes_frete</div>
+        <table class="data-table" style="margin-bottom:20px;">
+          <thead><tr><th>Coluna</th><th>Tipo</th></tr></thead>
+          <tbody>
+            <tr><td>id</td><td class="type">PK BIGINT</td></tr>
+            <tr><td>solicitacao_frete_id</td><td class="type">FK — ON DELETE CASCADE</td></tr>
+            <tr><td>perfil_transportadora_id</td><td class="type">FK — transportadora cotante</td></tr>
+            <tr><td>valor</td><td class="type">DECIMAL(12,2) NOT NULL</td></tr>
+            <tr><td>prazo_dias</td><td class="type">INT NULL</td></tr>
+            <tr><td>observacoes</td><td class="type">TEXT</td></tr>
+            <tr><td>status</td><td class="type">ENVIADA | ACEITA | RECUSADA</td></tr>
+          </tbody>
+        </table>
+        <div class="accent-block">
+          <p class="body-sm">Uma solicitacao pode receber N cotacoes de transportadoras distintas. O solicitante aceita uma — as demais ficam RECUSADAS. A FK para <code>perfil_transportadora_id</code> em <code>solicitacoes_frete</code> registra qual foi escolhida.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 8: RELACIONAMENTOS -->
+  <section class="slide" data-slide="7">
+    <div class="anim-child label">Relacionamentos</div>
+    <div class="anim-child title-lg" style="margin-bottom:24px;">Foreign Keys — diagrama de dependencias</div>
+    <div class="anim-child fk-list">
+      <div class="fk-row">
+        <div class="fk-parent">contas_usuario</div>
+        <div class="fk-arrow">&rarr;</div>
+        <div class="fk-child">perfis_produtor</div>
+        <div class="fk-action">fk_perfil_produtor_conta &nbsp; ON DELETE CASCADE</div>
+      </div>
+      <div class="fk-row">
+        <div class="fk-parent">contas_usuario</div>
+        <div class="fk-arrow">&rarr;</div>
+        <div class="fk-child">perfis_corporativa</div>
+        <div class="fk-action">fk_perfil_corporativa_conta &nbsp; ON DELETE CASCADE</div>
+      </div>
+      <div class="fk-row">
+        <div class="fk-parent">contas_usuario</div>
+        <div class="fk-arrow">&rarr;</div>
+        <div class="fk-child">perfis_transportadora</div>
+        <div class="fk-action">fk_perfil_transp_conta &nbsp; ON DELETE CASCADE</div>
+      </div>
+      <div class="fk-row">
+        <div class="fk-parent">perfis_transportadora</div>
+        <div class="fk-arrow">&rarr;</div>
+        <div class="fk-child">regioes_atendimento_transportadora</div>
+        <div class="fk-action">fk_regioes_transp_perfil &nbsp; ON DELETE CASCADE</div>
+      </div>
+      <div class="fk-row">
+        <div class="fk-parent">contas_usuario</div>
+        <div class="fk-arrow">&rarr;</div>
+        <div class="fk-child">anuncios</div>
+        <div class="fk-action">fk_anuncios_conta &nbsp; ON DELETE RESTRICT</div>
+      </div>
+      <div class="fk-row">
+        <div class="fk-parent">anuncios</div>
+        <div class="fk-arrow">&rarr;</div>
+        <div class="fk-child">fotos_anuncio</div>
+        <div class="fk-action">fk_fotos_anuncio &nbsp; ON DELETE CASCADE</div>
+      </div>
+      <div class="fk-row">
+        <div class="fk-parent">anuncios</div>
+        <div class="fk-arrow">&rarr;</div>
+        <div class="fk-child">propostas</div>
+        <div class="fk-action">fk_propostas_anuncio &nbsp; ON DELETE RESTRICT</div>
+      </div>
+      <div class="fk-row">
+        <div class="fk-parent">contas_usuario</div>
+        <div class="fk-arrow">&rarr;</div>
+        <div class="fk-child">propostas</div>
+        <div class="fk-action">fk_propostas_comprador &nbsp; ON DELETE RESTRICT</div>
+      </div>
+      <div class="fk-row">
+        <div class="fk-parent">solicitacoes_frete</div>
+        <div class="fk-arrow">&rarr;</div>
+        <div class="fk-child">cotacoes_frete</div>
+        <div class="fk-action">fk_cotacao_solicitacao &nbsp; ON DELETE CASCADE</div>
+      </div>
+      <div class="fk-row">
+        <div class="fk-parent">perfis_transportadora</div>
+        <div class="fk-arrow">&rarr;</div>
+        <div class="fk-child">cotacoes_frete</div>
+        <div class="fk-action">fk_cotacao_transportadora &nbsp; ON DELETE RESTRICT</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 9: NORMALIZACAO -->
+  <section class="slide" data-slide="8">
+    <div class="anim-child label">Normalizacao</div>
+    <div class="anim-child title-lg" style="margin-bottom:28px;">Conformidade com 3FN</div>
+    <div class="anim-child def-list">
+      <div class="def-row" style="grid-template-columns:180px 1fr; padding:16px 0;">
+        <div class="def-term" style="font-size:14px; color:var(--green);">1FN — Primeira Forma Normal</div>
+        <div class="def-desc">
+          Todas as colunas possuem valores atomicos. Nenhum campo multivalorado — a relacao <code>regioes_atendimento_transportadora</code> separa as regioes de cobertura em linhas distintas, evitando lista de valores em uma unica coluna. ENUMs delimitam valores validos atomicamente.
+        </div>
+      </div>
+      <div class="def-row" style="grid-template-columns:180px 1fr; padding:16px 0;">
+        <div class="def-term" style="font-size:14px; color:var(--green);">2FN — Segunda Forma Normal</div>
+        <div class="def-desc">
+          Todas as colunas dependem da chave primaria inteira. Nenhuma dependencia parcial existe porque todas as tabelas usam chave simples (BIGINT UNSIGNED PK). Atributos de perfil estao em tabelas proprias — nao em <code>contas_usuario</code> — evitando dependencia de subconjunto de chave.
+        </div>
+      </div>
+      <div class="def-row" style="grid-template-columns:180px 1fr; padding:16px 0;">
+        <div class="def-term" style="font-size:14px; color:var(--green);">3FN — Terceira Forma Normal</div>
+        <div class="def-desc">
+          Nenhuma dependencia transitiva entre colunas nao-chave. Exemplo: dados de localizacao (cidade, estado) estao em cada tabela de perfil e em <code>anuncios</code> por serem atributos proprios dessas entidades — nao derivados de outra coluna nao-chave. O nome da empresa nao e armazenado em <code>anuncios</code> — e obtido via JOIN com <code>contas_usuario</code>.
+        </div>
+      </div>
+    </div>
+    <hr class="rule anim-child">
+    <div class="anim-child accent-block" style="margin-top:8px;">
+      <p class="body-sm">Excecao intencional: <code>cidade</code> e <code>estado</code> aparecem em multiplas tabelas por decisao de desempenho (denormalizacao controlada), evitando JOINs em consultas frequentes de listagem e filtro. Esta e uma pratica padrao em sistemas OLTP de alta leitura.</p>
+    </div>
+  </section>
+
+  <!-- SLIDE 10: INDICES -->
+  <section class="slide" data-slide="9">
+    <div class="anim-child label">Indices e Integridade</div>
+    <div class="anim-child title-lg" style="margin-bottom:24px;">Indices para performance das consultas principais</div>
+    <div class="anim-child">
+      <table class="data-table">
+        <thead>
+          <tr><th>Nome do Indice</th><th>Tabela</th><th>Coluna(s)</th><th>Tipo</th><th>Proposito</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>uk_contas_email</td><td>contas_usuario</td><td>email</td><td class="type">UNIQUE</td><td>Busca rapida por email no login</td></tr>
+          <tr><td>uk_contas_documento</td><td>contas_usuario</td><td>documento</td><td class="type">UNIQUE</td><td>Prevencao de duplicata de CPF/CNPJ</td></tr>
+          <tr><td>idx_contas_tipo</td><td>contas_usuario</td><td>tipo_conta</td><td class="type">INDEX</td><td>Filtro por tipo de usuario</td></tr>
+          <tr><td>idx_contas_ativo</td><td>contas_usuario</td><td>ativo</td><td class="type">INDEX</td><td>Filtro de contas ativas no login</td></tr>
+          <tr><td>uk_perfil_produtor_conta</td><td>perfis_produtor</td><td>conta_usuario_id</td><td class="type">UNIQUE</td><td>Garante 1:1 entre conta e perfil</td></tr>
+          <tr><td>uk_perfil_corporativa_cnpj</td><td>perfis_corporativa</td><td>cnpj</td><td class="type">UNIQUE</td><td>CNPJ unico por empresa</td></tr>
+          <tr><td>idx_anuncios_status</td><td>anuncios</td><td>status</td><td class="type">INDEX</td><td>Filtro de anuncios ATIVOS na listagem</td></tr>
+          <tr><td>idx_anuncios_especie</td><td>anuncios</td><td>especie</td><td class="type">INDEX</td><td>Filtro por especie no catalogo</td></tr>
+          <tr><td>idx_anuncios_estado</td><td>anuncios</td><td>estado</td><td class="type">INDEX</td><td>Filtro geografico por UF</td></tr>
+          <tr><td>idx_propostas_status</td><td>propostas</td><td>status</td><td class="type">INDEX</td><td>Listagem de propostas AGUARDANDO</td></tr>
+          <tr><td>idx_frete_status</td><td>solicitacoes_frete</td><td>status</td><td class="type">INDEX</td><td>Painel de fretes em andamento</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- SLIDE 11: CONCLUSAO -->
+  <section class="slide" data-slide="10">
+    <div class="anim-child label">Conclusao</div>
+    <div class="anim-child title-lg" style="margin-bottom:32px;">Resumo do modelo de dados AgroPlace</div>
+    <div class="anim-child stat-row" style="margin-bottom:36px;">
+      <div class="stat-item">
+        <div class="stat-num">12</div>
+        <div class="stat-label">Tabelas de producao</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num">10</div>
+        <div class="stat-label">Foreign key constraints</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num">14</div>
+        <div class="stat-label">Indices adicionais</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num">6</div>
+        <div class="stat-label">ENUMs de dominio</div>
+      </div>
+    </div>
+    <hr class="rule anim-child">
+    <div class="anim-child two-col" style="gap:64px; margin-top:20px; align-items:start;">
+      <div>
+        <div class="def-list">
+          <div class="def-row" style="grid-template-columns:1fr; padding:12px 0;">
+            <div class="def-term" style="font-size:13px; color:var(--green);">Integridade referencial completa</div>
+            <div class="def-desc" style="margin-top:4px;">CASCADE em tabelas dependentes (fotos, regioes, cotacoes), RESTRICT em transacoes de negocio (anuncios, propostas) — dados historicos preservados</div>
+          </div>
+          <div class="def-row" style="grid-template-columns:1fr; padding:12px 0;">
+            <div class="def-term" style="font-size:13px; color:var(--green);">3 perfis de usuario independentes</div>
+            <div class="def-desc" style="margin-top:4px;">Cada tipo de conta tem sua tabela de perfil propria com campos especificos — nenhum campo e nulo por motivo de tipo de conta</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-divider">
+        <div class="def-list">
+          <div class="def-row" style="grid-template-columns:1fr; padding:12px 0;">
+            <div class="def-term" style="font-size:13px; color:var(--green);">Charset utf8mb4</div>
+            <div class="def-desc" style="margin-top:4px;">Suporte completo a Unicode 4-byte, necessario para caracteres especiais em nomes de propriedades rurais e descricoes de animais</div>
+          </div>
+          <div class="def-row" style="grid-template-columns:1fr; padding:12px 0;">
+            <div class="def-term" style="font-size:13px; color:var(--green);">Conformidade 3FN</div>
+            <div class="def-desc" style="margin-top:4px;">Schema em terceira forma normal com denormalizacao controlada em campos de localizacao para performance de leitura</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<div id="controls">
+  <button class="ctrl-btn" id="prev-btn">Anterior</button>
+  <span id="slide-counter">1 / 11</span>
+  <button class="ctrl-btn" id="next-btn">Proximo</button>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  let current = 0;
+  const progressBar = document.getElementById('progress-bar');
+  const counter = document.getElementById('slide-counter');
+  const dotNav = document.getElementById('dot-nav');
+
+  slides.forEach((_, i) => {
+    const dot = document.createElement('div');
+    dot.className = 'dot' + (i === 0 ? ' active' : '');
+    dot.addEventListener('click', () => goTo(i));
+    dotNav.appendChild(dot);
+  });
+
+  function goTo(n) {
+    slides[current].classList.remove('active');
+    dotNav.children[current].classList.remove('active');
+    current = Math.max(0, Math.min(n, total - 1));
+    slides[current].classList.add('active');
+    dotNav.children[current].classList.add('active');
+    progressBar.style.width = ((current + 1) / total * 100) + '%';
+    counter.textContent = (current + 1) + ' / ' + total;
+  }
+
+  document.getElementById('prev-btn').addEventListener('click', () => goTo(current - 1));
+  document.getElementById('next-btn').addEventListener('click', () => goTo(current + 1));
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') goTo(current + 1);
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') goTo(current - 1);
+  });
+  goTo(0);
+</script>
+</body>
+</html>
