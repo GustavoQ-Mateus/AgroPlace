@@ -9,6 +9,7 @@ import Button from '../components/ui/Button'
 import { FEATURED_ANIMALS } from '../data/mockAnimals'
 import { formatCurrency } from '../utils/formatters'
 import { useApp } from '../context/AppContext'
+import { deleteListing, updateListingStatus } from '../services/listingsService'
 
 const metrics = [
   ['Receita em propostas', 'R$ 412.000', DollarSign, '+12% vs. mês anterior'],
@@ -20,17 +21,49 @@ const metrics = [
 export default function SellerDashboard() {
   const { listings, addToast } = useApp()
   const [openMenu, setOpenMenu] = useState(null)
+  const [localListings, setLocalListings] = useState(null)
 
-  const allListings = [...listings, ...FEATURED_ANIMALS.slice(0, 5)]
+  const allListings = localListings !== null
+    ? localListings
+    : [...listings, ...FEATURED_ANIMALS.slice(0, 5)]
 
-  function handleDelete(id) {
-    addToast('Anúncio removido.', 'info')
+  async function handleDelete(id) {
+    try {
+      await deleteListing(id)
+      setLocalListings((prev) => (prev !== null ? prev : allListings).filter((l) => String(l.id) !== String(id)))
+      addToast('Anúncio excluído com sucesso')
+    } catch {
+      addToast('Erro ao excluir anúncio', 'error')
+    }
     setOpenMenu(null)
   }
 
-  function handlePause(id) {
-    addToast('Anúncio pausado.', 'info')
+  async function handlePause(id) {
+    const current = (localListings !== null ? localListings : allListings).find((l) => String(l.id) === String(id))
+    const newStatus = current?.status === 'PAUSADO' ? 'ATIVO' : 'PAUSADO'
+    try {
+      await updateListingStatus(id, newStatus)
+      setLocalListings((prev) => (prev !== null ? prev : allListings).map((l) =>
+        String(l.id) === String(id) ? { ...l, status: newStatus } : l
+      ))
+      addToast(newStatus === 'PAUSADO' ? 'Anúncio pausado.' : 'Anúncio reativado.', 'info')
+    } catch {
+      addToast('Erro ao atualizar anúncio.', 'error')
+    }
     setOpenMenu(null)
+  }
+
+  function handleExport() {
+    const rows = [
+      ['Especie', 'Quantidade', 'Preco Unitario', 'Cidade', 'Estado', 'Status'],
+      ...allListings.map(l => [l.especie || l.category || '', l.quantidade || l.quantity || '', l.preco_unitario || l.pricePerHead || '', l.cidade || '', l.estado || '', l.status || ''])
+    ]
+    const csv = rows.map(r => r.map(v => '"' + v + '"').join(',')).join('\n')
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url; a.download = 'meus-anuncios.csv'; a.click()
+    URL.revokeObjectURL(url)
   }
 
   return (
@@ -88,7 +121,7 @@ export default function SellerDashboard() {
                     Novo
                   </Button>
                 </Link>
-                <Button size="sm" variant="outline">Exportar</Button>
+                <Button size="sm" variant="outline" onClick={handleExport}>Exportar</Button>
               </div>
             </div>
 

@@ -40,7 +40,13 @@ const traceSections = [
 export default function ListingPage() {
   const { id } = useParams()
   const { savedAnimals, toggleSave, addToast } = useApp()
-  const animal = FEATURED_ANIMALS.find((item) => item.id === id) || FEATURED_ANIMALS[0]
+  const animal = FEATURED_ANIMALS.find((item) => String(item.id) === String(id))
+  if (!animal) return (
+    <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+      <h1 className="text-2xl font-bold text-zinc-800">Anúncio não encontrado</h1>
+      <Link to="/catalogo" className="text-emerald-600 hover:underline">← Voltar ao catálogo</Link>
+    </div>
+  )
   const related = FEATURED_ANIMALS.filter((item) => item.id !== animal.id && item.category === animal.category).slice(0, 3)
   const isSaved = savedAnimals.has(animal.id)
 
