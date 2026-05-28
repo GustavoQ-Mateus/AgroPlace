@@ -50,6 +50,8 @@ export default function CatalogPage() {
   const [sortOpen, setSortOpen] = useState(false)
   const [applied, setApplied]   = useState({ location: '', priceIdx: 0, weightIdx: 0, traceIdx: 0 })
   const [localSearch, setLocalSearch] = useState(searchQuery)
+  const [page, setPage] = useState(1)
+  const PER_PAGE = 12
 
   const ALL = useMemo(() => [...listings, ...FEATURED_ANIMALS], [listings])
 
@@ -83,6 +85,9 @@ export default function CatalogPage() {
     return [...result].sort(SORT_OPTIONS[sortIdx].fn)
   }, [ALL, params, activeCategory, applied, sortIdx])
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE))
+  const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE)
+
   function clearCategory() {
     const next = new URLSearchParams(params)
     next.delete('cat')
@@ -106,6 +111,7 @@ export default function CatalogPage() {
 
   function applyFilters() {
     setApplied({ location, priceIdx, weightIdx, traceIdx })
+    setPage(1)
   }
 
   function clearFilters() {
@@ -114,6 +120,7 @@ export default function CatalogPage() {
     setWeightIdx(0)
     setTraceIdx(0)
     setApplied({ location: '', priceIdx: 0, weightIdx: 0, traceIdx: 0 })
+    setPage(1)
     clearSearch()
     clearCategory()
   }
@@ -322,10 +329,31 @@ export default function CatalogPage() {
                   <span />
                 </div>
                 <div>
-                  {filtered.map((animal, index) => (
+                  {paginated.map((animal, index) => (
                     <AnimalCard animal={animal} index={index} key={animal.id} />
                   ))}
                 </div>
+
+              </div>
+            )}
+
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-3 mt-8">
+                <button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="px-4 py-2 rounded-lg border border-zinc-200 text-zinc-600 disabled:opacity-40 hover:bg-zinc-50 transition-colors"
+                >
+                  ← Anterior
+                </button>
+                <span className="text-sm text-zinc-500">Página {page} de {totalPages}</span>
+                <button
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="px-4 py-2 rounded-lg border border-zinc-200 text-zinc-600 disabled:opacity-40 hover:bg-zinc-50 transition-colors"
+                >
+                  Próximo →
+                </button>
               </div>
             )}
           </div>

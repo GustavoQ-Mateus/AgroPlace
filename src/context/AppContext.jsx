@@ -4,7 +4,7 @@ import * as authSvc   from '../services/authService'
 import * as favSvc    from '../services/favoritesService'
 import * as notifSvc  from '../services/notificationsService'
 
-const AppContext = createContext(null)
+export const AppContext = createContext(null)
 
 let toastId = 0
 
@@ -21,7 +21,7 @@ export function AppProvider({ children }) {
   const [listings, setListings]     = useState([])
 
   const [toasts, setToasts]         = useState([])
-  const [notifications, setNotifs]  = useState([])
+  const [notifications, setNotifications]  = useState([])
   const unsubNotifs                 = useRef(null)
 
   // ── Toast ──────────────────────────────────────────────────
@@ -38,7 +38,7 @@ export function AppProvider({ children }) {
   function setupNotifSubscription(userId) {
     if (unsubNotifs.current) unsubNotifs.current()
     unsubNotifs.current = notifSvc.subscribeNotifications(userId, (notif) => {
-      setNotifs((prev) => [notif, ...prev])
+      setNotifications((prev) => [notif, ...prev])
       addToast(notif.title, 'info')
     })
   }
@@ -176,7 +176,7 @@ export function AppProvider({ children }) {
 
   // ── Notificações lidas ─────────────────────────────────────
   async function markNotifsRead() {
-    setNotifs((prev) => prev.map((n) => ({ ...n, read: true })))
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
     try { await notifSvc.markAllRead() } catch {}
   }
 
@@ -230,7 +230,7 @@ function ToastContainer({ toasts, onRemove }) {
             t.type === 'error'
               ? 'border-red-200 bg-red-50 text-red-800'
               : t.type === 'info'
-                ? 'border-slate-200 bg-white text-slate-700'
+                ? 'border-yellow-200 bg-yellow-50 text-yellow-800'
                 : 'border-emerald-200 bg-emerald-50 text-emerald-800'
           }`}
         >

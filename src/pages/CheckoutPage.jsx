@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useParams } from 'react-router-dom'
 import { ArrowRight, BadgeDollarSign, CheckCircle2, FileSignature, LockKeyhole, MessageSquare, Truck } from 'lucide-react'
 import Button from '../components/ui/Button'
 import { FEATURED_ANIMALS } from '../data/mockAnimals'
@@ -7,10 +7,16 @@ import { formatCurrency } from '../utils/formatters'
 import { useApp } from '../context/AppContext'
 import { sendProposal as sendProposalAPI } from '../services/proposalsService'
 
-const animal = FEATURED_ANIMALS[0]
-
 export default function CheckoutPage() {
+  const { id } = useParams()
   const { sendProposal, user, addToast } = useApp()
+  const animal = FEATURED_ANIMALS.find(a => String(a.id) === String(id))
+  if (!animal) return (
+    <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+      <h1 className="text-2xl font-bold text-zinc-800">Anúncio não encontrado</h1>
+      <Link to="/" className="text-emerald-600 hover:underline">← Voltar ao início</Link>
+    </div>
+  )
   const [submitted, setSubmitted] = useState(false)
   const [loading, setLoading]     = useState(false)
   const [form, setForm]           = useState({

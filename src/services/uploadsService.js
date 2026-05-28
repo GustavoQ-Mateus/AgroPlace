@@ -12,7 +12,14 @@ const BUCKET_DOCS   = 'rastreabilidade-docs'
  * @returns {{ path: string, url: string }}
  */
 export async function uploadListingPhoto(file, sellerId, anuncioId) {
+  const ALLOWED_EXTS = ['jpg', 'jpeg', 'png', 'webp']
   const ext  = file.name.split('.').pop().toLowerCase()
+  if (!ALLOWED_EXTS.includes(ext)) {
+    throw new Error('Formato inválido. Use JPG, PNG ou WebP.')
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    throw new Error('Arquivo muito grande. Máximo 5MB.')
+  }
   const name = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
   const path = `${sellerId}/${anuncioId}/${name}`
 

@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { AlertCircle, Building2, CheckCircle2, Eye, EyeOff, LockKeyhole, Mail, Phone, ShieldCheck, Truck, UserRound } from 'lucide-react'
 import Button from '../components/ui/Button'
 import { useApp } from '../context/AppContext'
+import * as authSvc from '../services/authService'
 
 const roles = [
   { id: 'vendedor',       title: 'Produtor',        text: 'Publique lotes, acompanhe propostas e documentos.', icon: UserRound },
@@ -35,6 +36,9 @@ export default function AuthPage() {
   const [showPass, setShowPass]   = useState(false)
   const [loading, setLoading]     = useState(false)
   const [serverError, setServerError] = useState('')
+  const [showReset, setShowReset] = useState(false)
+  const [resetEmail, setResetEmail] = useState('')
+  const [resetSent, setResetSent] = useState(false)
 
   function setTab(nextTab) {
     const next = new URLSearchParams(params)
@@ -243,7 +247,7 @@ export default function AuthPage() {
                     <div className="flex items-center justify-between">
                       <span className="prop-label">Senha *</span>
                       {tab === 'login' && (
-                        <button type="button" className="text-xs font-semibold text-emerald-700 hover:text-emerald-800">
+                        <button type="button" onClick={() => setShowReset(true)} className="text-xs font-semibold text-emerald-700 hover:text-emerald-800">
                           Esqueci a senha
                         </button>
                       )}
@@ -267,6 +271,36 @@ export default function AuthPage() {
                     </span>
                     {errors.password && <p className="text-xs text-red-600">{errors.password}</p>}
                   </label>
+
+                  {tab === 'login' && showReset && (
+                    <div className="grid gap-2 border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Recuperar senha</p>
+                      <input
+                        className="h-10 border border-slate-200 bg-white px-3 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/15"
+                        placeholder="Digite seu e-mail"
+                        type="email"
+                        value={resetEmail}
+                        onChange={(e) => setResetEmail(e.target.value)}
+                      />
+                      <button
+                        type="button"
+                        className="h-10 border border-emerald-500 bg-emerald-50 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 transition-colors"
+                        onClick={async () => {
+                          try {
+                            await authSvc.resetPassword(resetEmail)
+                            setResetSent(true)
+                          } catch (err) {
+                            setServerError(err?.message || 'Erro ao enviar link.')
+                          }
+                        }}
+                      >
+                        Enviar link de recuperação
+                      </button>
+                      {resetSent && (
+                        <p className="text-sm font-semibold text-emerald-600">&#10003; Link enviado para seu e-mail!</p>
+                      )}
+                    </div>
+                  )}
 
                   <Button className="mt-1 h-11 w-full" type="submit" loading={loading}>
                     {tab === 'register' ? 'Criar conta e continuar' : 'Entrar na conta'}
