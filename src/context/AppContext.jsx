@@ -34,12 +34,27 @@ export function AppProvider({ children }) {
     setToasts((prev) => prev.filter((t) => t.id !== id))
   }
 
-  // ── Notificações ───────────────────────────────────────────
+  // ── Notificações browser ──────────────────────────────────
+  function requestBrowserNotifPermission() {
+    if (!('Notification' in window)) return
+    if (Notification.permission === 'default') {
+      Notification.requestPermission()
+    }
+  }
+
+  function sendBrowserNotif(title, body) {
+    if (Notification.permission === 'granted') {
+      new Notification(title, { body, icon: '/vite.svg' })
+    }
+  }
+
+  // ── Notificações Supabase ─────────────────────────────────
   function setupNotifSubscription(userId) {
     if (unsubNotifs.current) unsubNotifs.current()
     unsubNotifs.current = notifSvc.subscribeNotifications(userId, (notif) => {
       setNotifications((prev) => [notif, ...prev])
       addToast(notif.title, 'info')
+      sendBrowserNotif(notif.title, notif.body || '')
     })
   }
 
@@ -54,6 +69,9 @@ export function AppProvider({ children }) {
       }
       setLoadingAuth(false)
     })
+
+    // Solicita permissão de notificações do browser
+    requestBrowserNotifPermission()
 
     // Listener de mudanças de auth
     const unsub = authSvc.onAuthChange(async (event, session) => {
@@ -208,6 +226,9 @@ export function AppProvider({ children }) {
     toasts,
     addToast,
     removeToast,
+
+    // Notificações browser
+    requestBrowserNotifPermission,
   }
 
   return (

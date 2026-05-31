@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowRight, BarChart3, CheckCircle2, ClipboardCheck, DollarSign,
@@ -6,10 +6,14 @@ import {
   ShieldCheck, Trash2, TrendingUp,
 } from 'lucide-react'
 import Button from '../components/ui/Button'
+import EditListingModal from '../components/EditListingModal'
+import OnboardingModal from '../components/OnboardingModal'
 import { FEATURED_ANIMALS } from '../data/mockAnimals'
 import { formatCurrency } from '../utils/formatters'
 import { useApp } from '../context/AppContext'
 import { deleteListing, updateListingStatus } from '../services/listingsService'
+
+const OB_KEY = 'agroplace_onboarding_done'
 
 const metrics = [
   ['Receita em propostas', 'R$ 412.000', DollarSign, '+12% vs. mês anterior'],
@@ -22,6 +26,13 @@ export default function SellerDashboard() {
   const { listings, addToast } = useApp()
   const [openMenu, setOpenMenu] = useState(null)
   const [localListings, setLocalListings] = useState(null)
+  const [editingListing, setEditingListing] = useState(null)
+  const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem(OB_KEY))
+
+  function closeOnboarding() {
+    localStorage.setItem(OB_KEY, '1')
+    setShowOnboarding(false)
+  }
 
   const allListings = localListings !== null
     ? localListings
@@ -180,7 +191,10 @@ export default function SellerDashboard() {
                       </button>
                       {openMenu === animal.id && (
                         <div className="absolute right-0 top-full z-10 mt-1 min-w-40 border border-slate-200 bg-white py-1 shadow-lg">
-                          <button className="flex w-full items-center gap-2 px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
+                          <button
+                            onClick={() => { setEditingListing(animal); setOpenMenu(null) }}
+                            className="flex w-full items-center gap-2 px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                          >
                             <Edit2 size={13} /> Editar anúncio
                           </button>
                           <button
@@ -299,6 +313,23 @@ export default function SellerDashboard() {
           </aside>
         </div>
       </div>
+      {editingListing && (
+        <EditListingModal
+          listing={editingListing}
+          onClose={() => setEditingListing(null)}
+          onSaved={(updated) => {
+            setLocalListings((prev) =>
+              (prev !== null ? prev : allListings).map((l) =>
+                String(l.id) === String(updated.id) ? { ...l, ...updated } : l
+              )
+            )
+          }}
+        />
+      )}
+
+      {showOnboarding && (
+        <OnboardingModal role="vendedor" onClose={closeOnboarding} />
+      )}
     </section>
   )
 }

@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { MapPin, ShieldCheck } from 'lucide-react'
+import { MapPin, ShieldCheck, GitCompareArrows } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import Button from './ui/Button'
 import { formatCurrency } from '../utils/formatters'
@@ -13,10 +13,10 @@ const categoryLabels = {
   caprinos: 'Caprinos',
 }
 
-export default function AnimalCard({ animal, index = 0 }) {
+export default function AnimalCard({ animal, index = 0, onCompare, compareSelected }) {
   return (
     <motion.div
-      className="grid grid-cols-[56px_1fr] items-center gap-4 border-b border-slate-100 px-5 py-3.5 last:border-0 transition hover:bg-slate-50 sm:grid-cols-[56px_1fr_auto_auto_auto_auto]"
+      className={`grid grid-cols-[56px_1fr] items-center gap-4 border-b border-slate-100 px-5 py-3.5 last:border-0 transition hover:bg-slate-50 sm:grid-cols-[56px_1fr_auto_auto_auto_auto] ${compareSelected ? 'bg-emerald-50' : ''}`}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ delay: index * 0.04, duration: 0.25 }}
@@ -63,11 +63,22 @@ export default function AnimalCard({ animal, index = 0 }) {
         <p className="text-[11px] text-slate-400">{formatCurrency(animal.pricePerHead)}/cab.</p>
       </div>
 
-      <div className="hidden sm:block">
+      <div className="hidden items-center gap-2 sm:flex">
+        {onCompare && (
+          <button
+            onClick={() => onCompare(animal)}
+            title={compareSelected ? 'Remover da comparação' : 'Comparar lote'}
+            className={`flex h-8 w-8 items-center justify-center border transition ${
+              compareSelected
+                ? 'border-emerald-400 bg-emerald-600 text-white'
+                : 'border-slate-200 text-slate-400 hover:border-emerald-300 hover:text-emerald-600'
+            }`}
+          >
+            <GitCompareArrows size={13} />
+          </button>
+        )}
         <Link to={`/anuncio/${animal.id}`}>
-          <Button size="sm" variant="outline">
-            Ver lote
-          </Button>
+          <Button size="sm" variant="outline">Ver lote</Button>
         </Link>
       </div>
     </motion.div>

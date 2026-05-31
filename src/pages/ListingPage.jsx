@@ -39,10 +39,17 @@ const traceSections = [
   },
 ]
 
+function useViewers() {
+  const [count] = useState(() => 2 + Math.floor(Math.random() * 8))
+  return count
+}
+
 export default function ListingPage() {
   const { id } = useParams()
   const { savedAnimals, toggleSave, user, addToast } = useApp()
   const [showMessage, setShowMessage] = useState(false)
+  const [activePhoto, setActivePhoto] = useState(0)
+  const viewers = useViewers()
   const animal = FEATURED_ANIMALS.find((item) => String(item.id) === String(id))
   if (!animal) return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-4">
@@ -70,19 +77,36 @@ export default function ListingPage() {
         <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
           {/* Left column */}
           <div className="space-y-6">
-            {/* Image */}
+            {/* Gallery */}
             <div className="border border-slate-200 bg-white">
-              <div className="h-[360px] bg-slate-200 sm:h-[460px]">
-                <img alt={animal.title} className="h-full w-full object-cover" src={animal.image} />
+              <div className="relative h-[360px] bg-slate-200 sm:h-[460px]">
+                <img
+                  alt={animal.title}
+                  className="h-full w-full object-cover"
+                  src={[animal.image, animal.image, animal.image][activePhoto] || animal.image}
+                />
+                {/* Viewer badge */}
+                <div className="absolute left-3 top-3 flex items-center gap-1.5 border border-white/30 bg-black/50 px-2.5 py-1.5 text-xs font-semibold text-white backdrop-blur-sm">
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                  </span>
+                  {viewers} pessoas visualizando agora
+                </div>
               </div>
-              <div className="grid grid-cols-3 gap-px bg-slate-200 border-t border-slate-200">
+              <div className="grid grid-cols-3 gap-px border-t border-slate-200 bg-slate-200">
                 {[animal.image, animal.image, animal.image].map((img, index) => (
-                  <img
-                    alt={`${animal.title} ${index + 1}`}
-                    className="h-20 w-full bg-slate-200 object-cover cursor-pointer transition hover:opacity-90"
-                    key={`${img}-${index}`}
-                    src={img}
-                  />
+                  <button
+                    key={index}
+                    onClick={() => setActivePhoto(index)}
+                    className={`relative h-20 w-full overflow-hidden transition ${activePhoto === index ? 'ring-2 ring-emerald-600 ring-inset' : 'opacity-70 hover:opacity-100'}`}
+                  >
+                    <img
+                      alt={`${animal.title} ${index + 1}`}
+                      className="h-full w-full bg-slate-200 object-cover"
+                      src={img}
+                    />
+                  </button>
                 ))}
               </div>
             </div>

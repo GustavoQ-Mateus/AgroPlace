@@ -1,11 +1,14 @@
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState, lazy, Suspense } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { ArrowUpDown, Filter, MapPin, Search, X } from 'lucide-react'
+import { ArrowUpDown, Filter, GitCompareArrows, Map, List, MapPin, Search, X } from 'lucide-react'
 import AnimalCard from '../components/AnimalCard'
 import Button from '../components/ui/Button'
 import { SkeletonList } from '../components/SkeletonCard'
+import CompareModal from '../components/CompareModal'
 import { CATEGORIES, FEATURED_ANIMALS } from '../data/mockAnimals'
 import { useApp } from '../context/AppContext'
+
+const MapaCatalogo = lazy(() => import('../components/MapaCatalogo'))
 
 const PRICE_OPTIONS = [
   { label: 'Qualquer preço',   min: 0,        max: Infinity },
@@ -53,7 +56,20 @@ export default function CatalogPage() {
   const [localSearch, setLocalSearch] = useState(searchQuery)
   const [page, setPage] = useState(1)
   const [isFiltering, setIsFiltering] = useState(false)
+  const [viewMode, setViewMode] = useState('list') // 'list' | 'map'
+  const [compareIds, setCompareIds] = useState(new Set())
+  const [showCompare, setShowCompare] = useState(false)
   const PER_PAGE = 12
+
+  function toggleCompare(animal) {
+    setCompareIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(animal.id)) { next.delete(animal.id) }
+      else if (next.size < 3) { next.add(animal.id) }
+      return next
+    })
+  }
+  const compareAnimals = filtered.filter((a) => compareIds.has(a.id))
 
   const ALL = useMemo(() => [...listings, ...FEATURED_ANIMALS], [listings])
 
@@ -149,6 +165,21 @@ export default function CatalogPage() {
               </p>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row">
+              {/* View mode toggle */}
+              <div className="flex border border-slate-200">
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`flex h-10 items-center gap-2 px-3 text-sm font-semibold transition ${viewMode === 'list' ? 'bg-emerald-600 text-white' : 'text-slate-500 hover:bg-slate-50'}`}
+                >
+                  <List size={14} /> Lista
+                </button>
+                <button
+                  onClick={() => setViewMode('map')}
+                  className={`flex h-10 items-center gap-2 px-3 text-sm font-semibold transition ${viewMode === 'map' ? 'bg-emerald-600 text-white' : 'text-slate-500 hover:bg-slate-50'}`}
+                >
+                  <Map size={14} /> Mapa
+                </button>
+              </div>
               <form onSubmit={handleSearch} className="relative block w-full sm:min-w-72">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
                 <input
@@ -315,7 +346,29 @@ export default function CatalogPage() {
               <p className="text-xs font-medium text-slate-400">Atualizado agora</p>
             </div>
 
-            {isFiltering ? (
+            {/* Compare bar */}
+            {compareIds.size > 0 && (
+              <div className="mb-4 flex items-center justify-between border border-emerald-200 bg-emerald-50 px-4 py-3">
+                <p className="flex items-center gap-2 text-sm font-bold text-emerald-800">
+                  <GitCompareArrows size={15} />
+                  {compareIds.size} lote{compareIds.size > 1 ? 's' : ''} selecionado{compareIds.size > 1 ? 's' : ''} para comparação
+                </p>
+                <div className="flex gap-2">
+                  <button onClick={() => setCompareIds(new Set())} className="text-xs font-semibold text-emerald-600 hover:text-emerald-800">
+                    Limpar
+                  </button>
+                  <Button size="sm" onClick={() => setShowCompare(true)} disabled={compareIds.size < 2}>
+                    Comparar agora
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {viewMode === 'map' ? (
+              <Suspense fallback={<div className="flex h-96 items-center justify-center border border-slate-200 bg-white text-sm text-slate-400">Carregando mapa…</div>}>
+                <MapaCatalogo animals={filtered} />
+              </Suspense>
+            ) : isFiltering ? (
               <div className="border border-slate-200 bg-white">
                 <div className="hidden grid-cols-[56px_1fr_auto_auto_auto_auto] items-center gap-4 border-b border-slate-200 bg-slate-50 px-5 py-2.5 sm:grid">
                   <span /><span className="prop-label">Lote / Produtor</span>
@@ -347,7 +400,13 @@ export default function CatalogPage() {
                 </div>
                 <div>
                   {paginated.map((animal, index) => (
-                    <AnimalCard animal={animal} index={index} key={animal.id} />
+                    <AnimalCard
+                      animal={animal}
+                      index={index}
+                      key={animal.id}
+                      onCompare={toggleCompare}
+                      compareSelected={compareIds.has(animal.id)}
+                    />
                   ))}
                 </div>
               </div>
@@ -375,6 +434,9 @@ export default function CatalogPage() {
           </div>
         </div>
       </div>
+      {showCompare && compareAnimals.length >= 2 && (
+        <CompareModal animals={compareAnimals} onClose={() => setShowCompare(false)} />
+      )}
     </section>
   )
 }

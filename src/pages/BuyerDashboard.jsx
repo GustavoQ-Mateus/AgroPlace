@@ -3,6 +3,10 @@ import { CalendarCheck2, CheckCircle2, Clock3, FileText, MapPinned, PackageSearc
 import Button from '../components/ui/Button'
 import { FEATURED_ANIMALS, ORDERS } from '../data/mockAnimals'
 import { useApp } from '../context/AppContext'
+import OnboardingModal from '../components/OnboardingModal'
+import { useState } from 'react'
+
+const OB_KEY_BUYER = 'agroplace_onboarding_buyer_done'
 
 const stateStyle = {
   done:   'bg-emerald-600 text-white border-emerald-600',
@@ -12,6 +16,11 @@ const stateStyle = {
 
 export default function BuyerDashboard() {
   const { proposals, savedAnimals, toggleSave, addToast } = useApp()
+  const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem(OB_KEY_BUYER))
+  function closeOnboarding() { localStorage.setItem(OB_KEY_BUYER, '1'); setShowOnboarding(false) }
+
+  // Lotes salvos reais: busca nos FEATURED_ANIMALS pelo ID
+  const savedList = FEATURED_ANIMALS.filter((a) => savedAnimals.has(a.id))
 
   const allOrders = [
     ...proposals.map((p) => ({
@@ -191,7 +200,15 @@ export default function BuyerDashboard() {
                 <span className="text-xs font-semibold text-slate-400">{savedAnimals.size} salvo{savedAnimals.size !== 1 ? 's' : ''}</span>
               </div>
               <div className="divide-y divide-slate-100">
-                {FEATURED_ANIMALS.slice(1, 4).map((animal) => (
+                {savedList.length === 0 && (
+                  <div className="px-4 py-6 text-center">
+                    <p className="text-sm text-slate-500">Nenhum lote salvo ainda.</p>
+                    <Link to="/catalogo" className="mt-2 block text-xs font-bold text-emerald-700">
+                      Explorar catálogo
+                    </Link>
+                  </div>
+                )}
+                {savedList.slice(0, 4).map((animal) => (
                   <div
                     className="flex items-center gap-3 px-4 py-3.5 transition hover:bg-slate-50"
                     key={animal.id}
@@ -211,19 +228,14 @@ export default function BuyerDashboard() {
                     </button>
                   </div>
                 ))}
-                {savedAnimals.size === 0 && (
-                  <div className="px-4 py-6 text-center">
-                    <p className="text-sm text-slate-500">Nenhum lote salvo ainda.</p>
-                    <Link to="/catalogo" className="mt-2 block text-xs font-bold text-emerald-700">
-                      Explorar catálogo
-                    </Link>
-                  </div>
-                )}
               </div>
             </div>
           </aside>
         </div>
       </div>
+      {showOnboarding && (
+        <OnboardingModal role="comprador" onClose={closeOnboarding} />
+      )}
     </section>
   )
 }
