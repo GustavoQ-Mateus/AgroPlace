@@ -1,16 +1,25 @@
 export default function SkeletonCard() {
   return (
-    <div className="animate-pulse bg-white border border-zinc-100 rounded-2xl p-4 flex gap-4">
-      <div className="w-24 h-24 bg-zinc-200 rounded-xl flex-shrink-0" />
-      <div className="flex-1 space-y-3 py-1">
-        <div className="h-4 bg-zinc-200 rounded w-3/4" />
-        <div className="h-3 bg-zinc-200 rounded w-1/2" />
-        <div className="flex gap-2">
-          <div className="h-5 bg-zinc-200 rounded-full w-16" />
-          <div className="h-5 bg-zinc-200 rounded-full w-20" />
-        </div>
-        <div className="h-5 bg-zinc-200 rounded w-1/4" />
+    <div className="animate-pulse grid items-center gap-4 px-5 py-4 sm:grid-cols-[56px_1fr_auto_auto_auto_auto]">
+      <div className="h-10 w-10 bg-slate-200 hidden sm:block" />
+      <div className="space-y-2">
+        <div className="h-4 bg-slate-200 w-3/4" />
+        <div className="h-3 bg-slate-200 w-1/2" />
       </div>
+      <div className="h-4 bg-slate-200 w-12 hidden sm:block" />
+      <div className="h-4 bg-slate-200 w-14 hidden sm:block" />
+      <div className="h-4 bg-slate-200 w-20 hidden sm:block" />
+      <div className="h-8 bg-slate-200 w-16 hidden sm:block" />
+    </div>
+  )
+}
+
+export function SkeletonList({ count = 6 }) {
+  return (
+    <div className="divide-y divide-slate-100">
+      {Array.from({ length: count }).map((_, i) => (
+        <SkeletonCard key={i} />
+      ))}
     </div>
   )
 }

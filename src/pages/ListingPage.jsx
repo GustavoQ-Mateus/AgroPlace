@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
   ArrowRight,
@@ -15,6 +16,7 @@ import {
   Wheat,
 } from 'lucide-react'
 import Button from '../components/ui/Button'
+import MessageModal from '../components/MessageModal'
 import { FEATURED_ANIMALS } from '../data/mockAnimals'
 import { formatCurrency } from '../utils/formatters'
 import { useApp } from '../context/AppContext'
@@ -39,7 +41,8 @@ const traceSections = [
 
 export default function ListingPage() {
   const { id } = useParams()
-  const { savedAnimals, toggleSave, addToast } = useApp()
+  const { savedAnimals, toggleSave, user, addToast } = useApp()
+  const [showMessage, setShowMessage] = useState(false)
   const animal = FEATURED_ANIMALS.find((item) => String(item.id) === String(id))
   if (!animal) return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-4">
@@ -176,7 +179,10 @@ export default function ListingPage() {
                     </Button>
                   </Link>
                   <div className="grid grid-cols-2 gap-2">
-                    <Button className="h-10 w-full" variant="outline" onClick={() => addToast('Mensagem: em breve disponível.', 'info')}>
+                    <Button className="h-10 w-full" variant="outline" onClick={() => {
+                      if (!user) { addToast('Faça login para enviar mensagens.', 'info'); return }
+                      setShowMessage(true)
+                    }}>
                       <MessageSquare size={15} />
                       Mensagem
                     </Button>
@@ -217,6 +223,14 @@ export default function ListingPage() {
             </div>
           </aside>
         </div>
+
+        {showMessage && (
+          <MessageModal
+            anuncio={animal}
+            sellerId={animal.seller || 'unknown'}
+            onClose={() => setShowMessage(false)}
+          />
+        )}
 
         {/* Related listings */}
         {related.length > 0 && (

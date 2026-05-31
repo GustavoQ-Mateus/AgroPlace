@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Link, useLocation, useParams } from 'react-router-dom'
-import { ArrowRight, BadgeDollarSign, CheckCircle2, FileSignature, LockKeyhole, MessageSquare, Truck } from 'lucide-react'
+import { Link, useParams } from 'react-router-dom'
+import { ArrowRight, BadgeDollarSign, CheckCircle2, FileSignature, LockKeyhole, MessageSquare, Truck, PenLine } from 'lucide-react'
 import Button from '../components/ui/Button'
 import { FEATURED_ANIMALS } from '../data/mockAnimals'
 import { formatCurrency } from '../utils/formatters'
@@ -18,6 +18,9 @@ export default function CheckoutPage() {
     </div>
   )
   const [submitted, setSubmitted] = useState(false)
+  const [signed, setSigned]       = useState(false)
+  const [signName, setSignName]   = useState('')
+  const [acceptTerms, setAcceptTerms] = useState(false)
   const [loading, setLoading]     = useState(false)
   const [form, setForm]           = useState({
     price: 'R$ 190.000',
@@ -56,34 +59,89 @@ export default function CheckoutPage() {
 
   if (submitted) {
     return (
-      <section className="flex min-h-screen items-center justify-center bg-slate-50 pt-14">
-        <div className="mx-auto max-w-lg border border-slate-200 bg-white px-8 py-12 text-center">
-          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center bg-emerald-600">
-            <CheckCircle2 className="text-white" size={32} />
+      <section className="flex min-h-screen items-center justify-center bg-slate-50 pt-14 px-4">
+        <div className="mx-auto w-full max-w-lg space-y-4">
+          {/* Confirmação da proposta */}
+          <div className="border border-slate-200 bg-white px-8 py-8 text-center">
+            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center bg-emerald-600">
+              <CheckCircle2 className="text-white" size={32} />
+            </div>
+            <h2 className="text-2xl font-black text-emerald-950">Proposta enviada!</h2>
+            <p className="mt-3 text-slate-600 leading-6">
+              Sua proposta de <strong>{form.price}</strong> para{' '}
+              <strong>{animal.title}</strong> foi enviada. Você será notificado em até 24h.
+            </p>
+            <div className="mt-6 divide-y divide-slate-100 border border-slate-200 text-left">
+              {[
+                ['Lote', animal.title],
+                ['Valor proposto', form.price],
+                ['Sinal de reserva', form.signal],
+                ['Retirada desejada', form.date || '—'],
+                ['Frete', form.freight],
+                ['Status', signed ? 'Contrato assinado' : 'Aguardando resposta do vendedor'],
+              ].map(([label, value]) => (
+                <div key={label} className="flex items-center justify-between px-4 py-3">
+                  <span className="text-xs font-bold uppercase tracking-wide text-slate-400">{label}</span>
+                  <span className={`text-sm font-semibold ${label === 'Status' && signed ? 'text-emerald-700' : 'text-slate-800'}`}>{value}</span>
+                </div>
+              ))}
+            </div>
           </div>
-          <h2 className="text-2xl font-black text-emerald-950">Proposta enviada!</h2>
-          <p className="mt-3 text-slate-600 leading-6">
-            Sua proposta de <strong>{form.price}</strong> para o lote{' '}
-            <strong>{animal.title}</strong> foi enviada ao vendedor. Você será notificado em até 24h.
-          </p>
 
-          <div className="mt-6 divide-y divide-slate-100 border border-slate-200 text-left">
-            {[
-              ['Lote', animal.title],
-              ['Valor proposto', form.price],
-              ['Sinal de reserva', form.signal],
-              ['Retirada desejada', form.date || '—'],
-              ['Frete', form.freight],
-              ['Status', 'Aguardando resposta do vendedor'],
-            ].map(([label, value]) => (
-              <div key={label} className="flex items-center justify-between px-4 py-3">
-                <span className="text-xs font-bold uppercase tracking-wide text-slate-400">{label}</span>
-                <span className="text-sm font-semibold text-slate-800">{value}</span>
+          {/* Assinatura de contrato */}
+          {!signed ? (
+            <div className="border border-slate-200 bg-white">
+              <div className="flex items-center gap-3 border-b border-slate-200 px-6 py-4">
+                <PenLine className="text-emerald-700" size={18} />
+                <div>
+                  <p className="font-black text-emerald-950 text-sm">Assinar contrato digital</p>
+                  <p className="text-xs text-slate-500">Opcional agora — disponível após aceite do vendedor.</p>
+                </div>
               </div>
-            ))}
-          </div>
+              <div className="px-6 py-5 space-y-4">
+                <label className="grid gap-1.5">
+                  <span className="text-xs font-bold uppercase tracking-wide text-slate-500">Nome completo para assinatura</span>
+                  <input
+                    className="h-10 border border-slate-200 px-3 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/15"
+                    placeholder="Seu nome completo ou razão social"
+                    value={signName}
+                    onChange={(e) => setSignName(e.target.value)}
+                  />
+                </label>
+                <label className="flex cursor-pointer items-start gap-3">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 h-4 w-4 accent-emerald-600"
+                    checked={acceptTerms}
+                    onChange={(e) => setAcceptTerms(e.target.checked)}
+                  />
+                  <span className="text-sm leading-5 text-slate-600">
+                    Li e aceito os{' '}
+                    <span className="font-semibold text-emerald-700">termos do contrato</span>{' '}
+                    de compra e venda, incluindo as condições de sanidade, transporte e prazo de retirada.
+                  </span>
+                </label>
+                <Button
+                  className="w-full"
+                  disabled={!signName.trim() || !acceptTerms}
+                  onClick={() => setSigned(true)}
+                >
+                  <PenLine size={15} />
+                  Assinar contrato digitalmente
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 border border-emerald-200 bg-emerald-50 px-5 py-4">
+              <CheckCircle2 className="shrink-0 text-emerald-600" size={20} />
+              <div>
+                <p className="font-black text-emerald-950 text-sm">Contrato assinado digitalmente</p>
+                <p className="text-xs text-emerald-700">Assinado por: {signName} · {new Date().toLocaleDateString('pt-BR')}</p>
+              </div>
+            </div>
+          )}
 
-          <div className="mt-6 flex flex-col gap-3">
+          <div className="flex flex-col gap-3 pb-8">
             <Link to="/comprador">
               <Button className="w-full">Acompanhar proposta</Button>
             </Link>

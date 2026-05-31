@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { ArrowUpDown, Filter, MapPin, Search, SlidersHorizontal, X } from 'lucide-react'
+import { ArrowUpDown, Filter, MapPin, Search, X } from 'lucide-react'
 import AnimalCard from '../components/AnimalCard'
 import Button from '../components/ui/Button'
+import { SkeletonList } from '../components/SkeletonCard'
 import { CATEGORIES, FEATURED_ANIMALS } from '../data/mockAnimals'
 import { useApp } from '../context/AppContext'
 
@@ -51,6 +52,7 @@ export default function CatalogPage() {
   const [applied, setApplied]   = useState({ location: '', priceIdx: 0, weightIdx: 0, traceIdx: 0 })
   const [localSearch, setLocalSearch] = useState(searchQuery)
   const [page, setPage] = useState(1)
+  const [isFiltering, setIsFiltering] = useState(false)
   const PER_PAGE = 12
 
   const ALL = useMemo(() => [...listings, ...FEATURED_ANIMALS], [listings])
@@ -110,8 +112,12 @@ export default function CatalogPage() {
   }
 
   function applyFilters() {
-    setApplied({ location, priceIdx, weightIdx, traceIdx })
-    setPage(1)
+    setIsFiltering(true)
+    setTimeout(() => {
+      setApplied({ location, priceIdx, weightIdx, traceIdx })
+      setPage(1)
+      setIsFiltering(false)
+    }, 350)
   }
 
   function clearFilters() {
@@ -309,7 +315,18 @@ export default function CatalogPage() {
               <p className="text-xs font-medium text-slate-400">Atualizado agora</p>
             </div>
 
-            {filtered.length === 0 ? (
+            {isFiltering ? (
+              <div className="border border-slate-200 bg-white">
+                <div className="hidden grid-cols-[56px_1fr_auto_auto_auto_auto] items-center gap-4 border-b border-slate-200 bg-slate-50 px-5 py-2.5 sm:grid">
+                  <span /><span className="prop-label">Lote / Produtor</span>
+                  <span className="prop-label text-right">Cabeças</span>
+                  <span className="prop-label text-right">Rastreab.</span>
+                  <span className="prop-label text-right">Preço total</span>
+                  <span />
+                </div>
+                <SkeletonList count={8} />
+              </div>
+            ) : filtered.length === 0 ? (
               <div className="flex flex-col items-center justify-center border border-slate-200 bg-white py-16 text-center">
                 <Search size={32} className="mb-4 text-slate-300" />
                 <p className="font-black text-slate-700">Nenhum lote encontrado</p>
@@ -333,7 +350,6 @@ export default function CatalogPage() {
                     <AnimalCard animal={animal} index={index} key={animal.id} />
                   ))}
                 </div>
-
               </div>
             )}
 

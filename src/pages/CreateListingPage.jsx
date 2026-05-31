@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -41,11 +41,14 @@ const STEPS = [
   { id: 'preco',          label: 'Preço e frete',      icon: Tag },
 ]
 
+const LS_KEY = 'agroplace_listing_draft'
+
 const INITIAL = {
   category: '', breed: '', quantity: '', weightMin: '', weightMax: '', sex: '', age: '',
   state: '', city: '', farm: '',
   gta: false, brucela: false, tuberculose: false, aftosa: false, raiva: false, carbunculo: false, dna: false, organico: false,
   photos: [],
+  photoFiles: [],
   price: '', pricePerHead: '', pricePerArroba: '', freightIncluded: false, freightNote: '', description: '',
 }
 
@@ -53,9 +56,22 @@ export default function CreateListingPage() {
   const navigate = useNavigate()
   const { addListing, addToast, user } = useApp()
   const [step, setStep] = useState(0)
-  const [form, setForm] = useState(INITIAL)
+  const [form, setForm] = useState(() => {
+    try {
+      const saved = localStorage.getItem(LS_KEY)
+      if (saved) return { ...INITIAL, ...JSON.parse(saved), photos: [], photoFiles: [] }
+    } catch {}
+    return INITIAL
+  })
   const [errors, setErrors] = useState({})
   const [submitting, setSubmitting] = useState(false)
+
+  useEffect(() => {
+    try {
+      const { photos: _, photoFiles: __, ...toSave } = form
+      localStorage.setItem(LS_KEY, JSON.stringify(toSave))
+    } catch {}
+  }, [form])
 
   function set(key, value) {
     setForm((f) => ({ ...f, [key]: value }))
@@ -96,6 +112,18 @@ export default function CreateListingPage() {
       const priceTotal = +(form.price.replace(/\D/g, '') || '0') / 100
       const priceHead  = form.pricePerHead ? +(form.pricePerHead.replace(/\D/g, '') || '0') / 100 : null
 
+      // Upload fotos reais se houver arquivos selecionados
+      let photoUrls = form.photos.filter(p => p.startsWith('https://'))
+      if (form.photoFiles?.length > 0 && user?.id && !user.id.startsWith('demo-')) {
+        const tempId = `tmp-${Date.now()}`
+        for (const file of form.photoFiles) {
+          try {
+            const { url } = await uploadListingPhoto(file, user.id, tempId)
+            photoUrls.push(url)
+          } catch {}
+        }
+      }
+
       const listing = {
         title:           `${form.breed} — ${form.quantity} cabeças`,
         category:        form.category,
@@ -121,10 +149,8 @@ export default function CreateListingPage() {
       }
 
       try {
-        // Tenta usar Supabase real
-        await createListing({ listing, traceability, photos: form.photos })
+        await createListing({ listing, traceability, photos: photoUrls })
       } catch {
-        // Fallback local (sem Supabase configurado)
         addListing({
           ...listing,
           price:         priceTotal,
@@ -133,12 +159,13 @@ export default function CreateListingPage() {
           seller:        user?.name || 'Produtor',
           sellerVerified: true,
           traceability:  [form.gta, form.brucela, form.tuberculose, form.aftosa].filter(Boolean).length * 25,
-          image:         form.photos[0] || 'https://images.unsplash.com/photo-1500595046743-cd271d694d30?w=800&q=80',
+          image:         photoUrls[0] || 'https://images.unsplash.com/photo-1500595046743-cd271d694d30?w=800&q=80',
           tags:          ['GTA', form.organico && 'Orgânico'].filter(Boolean),
           status:        'Ativo',
         })
       }
 
+      localStorage.removeItem(LS_KEY)
       navigate('/vendedor')
     } catch (err) {
       addToast(err?.message || 'Erro ao publicar anúncio.', 'error')
@@ -478,22 +505,38 @@ function StepRastreabilidade({ form, set }) {
 }
 
 /* ─── Step 4: Fotos ────────────────────────────────────── */
+const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+const MAX_FILE_SIZE = 20 * 1024 * 1024 // 20 MB
+
 function StepFotos({ form, set }) {
   const [dragging, setDragging] = useState(false)
+  const inputRef = useRef(null)
 
-  const DEMO_PHOTOS = [
-    'https://images.unsplash.com/photo-1500595046743-cd271d694d30?w=400&q=70',
-    'https://images.unsplash.com/photo-1570042225831-d98fa7577f1e?w=400&q=70',
-    'https://images.unsplash.com/photo-1516467508483-a7212febe31a?w=400&q=70',
-  ]
-
-  function addDemo() {
-    const url = DEMO_PHOTOS[form.photos.length % DEMO_PHOTOS.length]
-    if (!form.photos.includes(url)) set('photos', [...form.photos, url])
+  function handleFiles(fileList) {
+    const files = Array.from(fileList).filter(
+      (f) => ALLOWED_TYPES.includes(f.type) && f.size <= MAX_FILE_SIZE
+    )
+    if (!files.length) return
+    const newPhotos = [...form.photos]
+    const newFiles = [...(form.photoFiles || [])]
+    files.forEach((file) => {
+      const url = URL.createObjectURL(file)
+      newPhotos.push(url)
+      newFiles.push(file)
+    })
+    set('photos', newPhotos)
+    set('photoFiles', newFiles)
   }
 
-  function removePhoto(url) {
-    set('photos', form.photos.filter((p) => p !== url))
+  function removePhoto(idx) {
+    const newPhotos = form.photos.filter((_, i) => i !== idx)
+    const newFiles = (form.photoFiles || []).filter((_, i) => i !== idx)
+    // Revoga object URLs geradas localmente
+    if (form.photos[idx]?.startsWith('blob:')) {
+      URL.revokeObjectURL(form.photos[idx])
+    }
+    set('photos', newPhotos)
+    set('photoFiles', newFiles)
   }
 
   return (
@@ -501,30 +544,38 @@ function StepFotos({ form, set }) {
       <div className="border border-slate-200 bg-white">
         <div className="panel-header">
           <h2 className="font-black text-emerald-950">Fotos do lote</h2>
-          <p className="text-xs text-slate-500">Mínimo 3 fotos · Max 20 MB cada</p>
+          <p className="text-xs text-slate-500">Mínimo 3 fotos · Max 20 MB cada · JPG, PNG, WebP</p>
         </div>
 
         <div className="p-5">
+          <input
+            ref={inputRef}
+            type="file"
+            multiple
+            accept="image/jpeg,image/jpg,image/png,image/webp"
+            className="hidden"
+            onChange={(e) => handleFiles(e.target.files)}
+          />
           <div
             onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
             onDragLeave={() => setDragging(false)}
-            onDrop={(e) => { e.preventDefault(); setDragging(false); addDemo() }}
-            onClick={addDemo}
+            onDrop={(e) => { e.preventDefault(); setDragging(false); handleFiles(e.dataTransfer.files) }}
+            onClick={() => inputRef.current?.click()}
             className={`flex cursor-pointer flex-col items-center justify-center gap-3 border-2 border-dashed py-10 transition ${
               dragging ? 'border-emerald-400 bg-emerald-50' : 'border-slate-200 hover:border-emerald-300 hover:bg-slate-50'
             }`}
           >
             <ImagePlus className="text-slate-400" size={32} />
             <div className="text-center">
-              <p className="font-semibold text-slate-700">Clique para adicionar foto de demonstração</p>
-              <p className="mt-0.5 text-xs text-slate-400">Em produção: arrastar e soltar arquivos JPEG/PNG</p>
+              <p className="font-semibold text-slate-700">Clique ou arraste fotos aqui</p>
+              <p className="mt-0.5 text-xs text-slate-400">JPG, PNG, WebP · até 20 MB por arquivo</p>
             </div>
           </div>
 
           {form.photos.length > 0 && (
             <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4">
               {form.photos.map((url, i) => (
-                <div key={url} className="group relative">
+                <div key={`${url}-${i}`} className="group relative">
                   <img src={url} alt="" className="h-24 w-full object-cover" />
                   {i === 0 && (
                     <span className="absolute bottom-1 left-1 bg-emerald-600 px-1.5 py-0.5 text-xs font-bold text-white">
@@ -532,7 +583,8 @@ function StepFotos({ form, set }) {
                     </span>
                   )}
                   <button
-                    onClick={() => removePhoto(url)}
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); removePhoto(i) }}
                     className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center bg-black/60 text-white opacity-0 transition group-hover:opacity-100"
                   >
                     <X size={10} />
