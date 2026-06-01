@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import Header from './Header'
 import Footer from './Footer'
 import ToastContainer from './ui/Toast'
+import CookieBanner from './ui/CookieBanner'
 
 export default function Layout() {
   const { pathname } = useLocation()
@@ -24,6 +25,7 @@ export default function Layout() {
       </main>
       <Footer />
       <ToastContainer />
+      <CookieBanner />
     </div>
   )
 }

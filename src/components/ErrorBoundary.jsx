@@ -17,13 +17,15 @@ export default class ErrorBoundary extends Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-4 text-center bg-zinc-50">
-          <div className="text-5xl">⚠️</div>
-          <h1 className="text-2xl font-bold text-zinc-800">Algo deu errado</h1>
-          <p className="text-zinc-500 text-sm max-w-md">{this.state.error?.message}</p>
+        <div className="flex min-h-screen flex-col items-center justify-center gap-5 px-4 text-center bg-[hsl(var(--bg))]">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-red-200 bg-red-50 text-2xl">⚠️</div>
+          <div>
+            <h1 className="text-xl font-black text-[hsl(var(--text))]">Algo deu errado</h1>
+            <p className="mt-2 text-sm text-[hsl(var(--muted-fg))] max-w-sm">{this.state.error?.message}</p>
+          </div>
           <button
             onClick={() => window.location.reload()}
-            className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-6 py-3 rounded-xl transition-colors"
+            className="h-10 px-5 text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 transition rounded-sm"
           >
             Recarregar página
           </button>
