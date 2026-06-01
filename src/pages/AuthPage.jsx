@@ -1,338 +1,198 @@
 import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { motion } from 'framer-motion'
-import { AlertCircle, Building2, CheckCircle2, Eye, EyeOff, LockKeyhole, Mail, Phone, ShieldCheck, Truck, UserRound } from 'lucide-react'
+import { Building2, Eye, EyeOff, Leaf, LockKeyhole, Mail, ShieldCheck, Truck, UserRound } from 'lucide-react'
 import Button from '../components/ui/Button'
-import { useApp } from '../context/AppContext'
-import * as authSvc from '../services/authService'
+import { FieldGroup } from '../components/ui/Input'
+import { useAuthStore } from '../stores/authStore'
 
-const roles = [
-  { id: 'vendedor',       title: 'Produtor',        text: 'Publique lotes, acompanhe propostas e documentos.', icon: UserRound },
-  { id: 'comprador',      title: 'Comprador',        text: 'Salve buscas, negocie e acompanhe entregas.', icon: Building2 },
-  { id: 'transportadora', title: 'Transportadora',   text: 'Receba cotações compatíveis com sua frota.', icon: Truck },
+const ROLES = [
+  { id: 'vendedor',       title: 'Produtor',       text: 'Publique lotes e acompanhe propostas.', Icon: UserRound },
+  { id: 'comprador',      title: 'Comprador',       text: 'Negocie e acompanhe entregas.',         Icon: Building2 },
+  { id: 'transportadora', title: 'Transportadora',  text: 'Receba cotações compatíveis.',           Icon: Truck },
 ]
 
-const benefits = [
+const BENEFITS = [
   'Verificação de fazenda, granja ou transportadora',
   'Histórico de propostas e contratos digitais',
-  'Rastreabilidade visível desde o primeiro anúncio',
+  'Rastreabilidade desde o primeiro anúncio',
 ]
 
-const DEMO_HINT = {
-  vendedor:       'vendedor@demo.com',
-  comprador:      'comprador@demo.com',
-  transportadora: 'frete@demo.com',
-}
-
 export default function AuthPage() {
-  const [params, setParams]       = useSearchParams()
-  const navigate                  = useNavigate()
-  const { login, register }       = useApp()
-  const tab                       = params.get('tab') === 'register' ? 'register' : 'login'
-  const selectedRole              = params.get('role') || 'vendedor'
+  const [params, setParams] = useSearchParams()
+  const navigate = useNavigate()
+  const { login, register, loading } = useAuthStore()
 
-  const [form, setForm]           = useState({ name: '', email: '', phone: '', password: '' })
-  const [errors, setErrors]       = useState({})
-  const [showPass, setShowPass]   = useState(false)
-  const [loading, setLoading]     = useState(false)
-  const [serverError, setServerError] = useState('')
-  const [showReset, setShowReset] = useState(false)
-  const [resetEmail, setResetEmail] = useState('')
-  const [resetSent, setResetSent] = useState(false)
+  const tab  = params.get('tab') === 'register' ? 'register' : 'login'
+  const role = params.get('role') || 'comprador'
 
-  function setTab(nextTab) {
+  const [form, setForm] = useState({ name: '', email: '', password: '' })
+  const [showPw, setShowPw] = useState(false)
+  const [error, setError] = useState('')
+
+  function setTab(t) {
     const next = new URLSearchParams(params)
-    if (nextTab === 'register') next.set('tab', 'register')
-    else next.delete('tab')
+    if (t === 'register') next.set('tab', 'register'); else next.delete('tab')
     setParams(next)
-    setErrors({})
-    setServerError('')
+    setError('')
   }
 
-  function setRole(role) {
+  function setRole(r) {
     const next = new URLSearchParams(params)
-    next.set('tab', 'register')
-    next.set('role', role)
+    next.set('role', r)
     setParams(next)
   }
 
-  function field(key, value) {
-    setForm((f) => ({ ...f, [key]: value }))
-    setErrors((e) => ({ ...e, [key]: undefined }))
-    setServerError('')
-  }
+  function field(k, v) { setForm((f) => ({ ...f, [k]: v })) }
 
   function validate() {
-    const errs = {}
-    if (tab === 'register' && !form.name.trim()) errs.name = 'Informe o nome ou razão social'
-    if (!form.email.trim() || !/\S+@\S+\.\S+/.test(form.email)) errs.email = 'E-mail inválido'
-    if (tab === 'register' && !form.phone.trim()) errs.phone = 'Informe o telefone'
-    if (!form.password || form.password.length < 6) errs.password = 'Senha deve ter pelo menos 6 caracteres'
-    setErrors(errs)
-    return Object.keys(errs).length === 0
+    if (!form.email.includes('@')) { setError('E-mail inválido'); return false }
+    if (form.password.length < 6) { setError('Senha deve ter pelo menos 6 caracteres'); return false }
+    if (tab === 'register' && !form.name.trim()) { setError('Nome é obrigatório'); return false }
+    return true
   }
 
   async function handleSubmit(e) {
     e.preventDefault()
     if (!validate()) return
-    setLoading(true)
-    setServerError('')
+    setError('')
     try {
-      let u
-      if (tab === 'register') {
-        u = await register({ email: form.email, password: form.password, name: form.name, phone: form.phone, role: selectedRole })
+      if (tab === 'login') {
+        await login(form.email, form.password, role)
       } else {
-        u = await login(form.email, form.password, selectedRole)
+        await register(form.name, form.email, form.password, role)
       }
-      const role = u?.user_metadata?.role || selectedRole
-      const dest = role === 'produtor' || role === 'vendedor' ? '/vendedor'
-                 : role === 'transportadora' ? '/logistica'
-                 : '/comprador'
-      navigate(dest)
+      navigate(role === 'vendedor' ? '/vendedor' : role === 'transportadora' ? '/logistica' : '/comprador')
     } catch (err) {
-      const msg = err?.message || ''
-      if (msg.includes('Invalid login credentials')) setServerError('E-mail ou senha incorretos.')
-      else if (msg.includes('already registered'))   setServerError('Este e-mail já está cadastrado.')
-      else if (msg.includes('Email not confirmed'))  setServerError('Confirme seu e-mail antes de entrar.')
-      else setServerError(msg || 'Erro ao processar. Tente novamente.')
-    } finally {
-      setLoading(false)
+      setError(err.message || 'Erro ao autenticar. Tente novamente.')
     }
   }
 
-  const hintEmail = DEMO_HINT[selectedRole]
-
   return (
-    <section className="min-h-screen bg-slate-50 pt-14">
-      <div className="mx-auto grid max-w-7xl min-h-[calc(100vh-56px)] lg:grid-cols-[0.9fr_1.1fr]">
-        {/* Left: brand panel */}
-        <div className="hidden border-r border-slate-200 bg-emerald-950 px-12 py-16 lg:flex lg:flex-col lg:justify-center">
-          <Link to="/" className="mb-10 flex items-center gap-2">
-            <span className="text-2xl font-black tracking-tight text-white">
-              Agro<span className="text-emerald-400">Place</span>
+    <div className="min-h-screen bg-[hsl(var(--bg))] flex">
+      {/* Left panel */}
+      <div className="hidden w-[420px] shrink-0 flex-col justify-between bg-brand-900 px-10 py-12 lg:flex">
+        <div>
+          <Link to="/" className="flex items-center gap-2.5 mb-12">
+            <span className="flex h-8 w-8 items-center justify-center bg-brand-500 text-white rounded-sm">
+              <Leaf size={17} />
             </span>
+            <span className="text-lg font-black text-white">Agro<span className="text-brand-300">Place</span></span>
+          </Link>
+          <h2 className="text-2xl font-black text-white leading-tight">
+            Marketplace de animais com rastreabilidade total
+          </h2>
+          <p className="mt-4 text-sm leading-7 text-brand-200/80">
+            Conectamos produtores, compradores e transportadoras com segurança em cada etapa.
+          </p>
+          <ul className="mt-8 space-y-3">
+            {BENEFITS.map((b) => (
+              <li key={b} className="flex items-start gap-3 text-sm text-brand-200/80">
+                <ShieldCheck size={15} className="mt-0.5 shrink-0 text-brand-400" />
+                {b}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <p className="text-xs text-brand-400">© {new Date().getFullYear()} AgroPlace · LGPD compliant</p>
+      </div>
+
+      {/* Right: form */}
+      <div className="flex flex-1 flex-col items-center justify-center px-4 py-12">
+        <div className="w-full max-w-md">
+          {/* Logo mobile */}
+          <Link to="/" className="mb-8 flex items-center gap-2 lg:hidden">
+            <span className="flex h-7 w-7 items-center justify-center bg-brand-600 text-white rounded-sm"><Leaf size={15} /></span>
+            <span className="text-base font-black text-[hsl(var(--text))]">Agro<span className="text-brand-600">Place</span></span>
           </Link>
 
-          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-emerald-400">Onboarding</p>
-          <h1 className="text-3xl font-black leading-tight text-white">
-            Entre com o perfil certo para sua operação
+          <h1 className="text-2xl font-black text-[hsl(var(--text))]">
+            {tab === 'register' ? 'Criar conta' : 'Entrar na plataforma'}
           </h1>
-          <p className="mt-4 text-base leading-7 text-emerald-100/70">
-            O acesso muda o painel, os documentos e o fluxo de negociação conforme o papel de cada participante.
+          <p className="mt-1.5 text-sm text-[hsl(var(--muted-fg))]">
+            {tab === 'register' ? 'Preencha os dados abaixo para começar.' : 'Acesse sua conta para continuar.'}
           </p>
 
-          <div className="mt-10 divide-y divide-emerald-800 border border-emerald-800">
-            {benefits.map((item) => (
-              <div className="flex items-center gap-3 px-4 py-4" key={item}>
-                <CheckCircle2 size={15} className="shrink-0 text-emerald-400" />
-                <p className="text-sm font-semibold text-emerald-100">{item}</p>
-              </div>
+          {/* Tab switcher */}
+          <div className="mt-6 flex border border-[hsl(var(--border))] rounded-sm overflow-hidden">
+            {['login', 'register'].map((t) => (
+              <button key={t} onClick={() => setTab(t)}
+                className={`flex-1 py-2.5 text-sm font-semibold transition ${tab === t ? 'bg-brand-600 text-white' : 'text-[hsl(var(--text-sub))] hover:bg-[hsl(var(--muted))]'}`}>
+                {t === 'login' ? 'Entrar' : 'Cadastrar'}
+              </button>
             ))}
           </div>
 
-          <div className="mt-8 border border-emerald-800/60 bg-emerald-900/40 px-4 py-4">
-            <p className="mb-2 text-xs font-bold uppercase tracking-wide text-emerald-400">Demo rápida</p>
-            <p className="text-sm text-emerald-200">Use qualquer e-mail ou experimente:</p>
-            <div className="mt-2 space-y-1">
-              {Object.entries(DEMO_HINT).map(([role, email]) => (
-                <p key={role} className="text-xs font-mono text-emerald-300">{email} / qualquer senha</p>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Right: form panel */}
-        <div className="flex flex-col justify-center px-6 py-10 sm:px-10 lg:px-16">
-          <motion.div
-            animate={{ opacity: 1, y: 0 }}
-            className="mx-auto w-full max-w-md"
-            initial={{ opacity: 0, y: 16 }}
-            transition={{ duration: 0.3 }}
-          >
-            <div className="mb-6 border border-slate-200 bg-white">
-              {/* Tab switcher */}
-              <div className="grid grid-cols-2 border-b border-slate-200">
-                <button
-                  className={`py-3 text-sm font-bold transition ${tab === 'login' ? 'border-b-2 border-emerald-600 text-emerald-700' : 'text-slate-500 hover:text-slate-700'}`}
-                  onClick={() => setTab('login')}
-                >
-                  Entrar
-                </button>
-                <button
-                  className={`py-3 text-sm font-bold transition ${tab === 'register' ? 'border-b-2 border-emerald-600 text-emerald-700' : 'text-slate-500 hover:text-slate-700'}`}
-                  onClick={() => setTab('register')}
-                >
-                  Criar conta
-                </button>
-              </div>
-
-              <div className="p-6">
-                {tab === 'register' && (
-                  <div className="mb-5">
-                    <p className="mb-3 text-xs font-bold uppercase tracking-wide text-slate-500">Perfil de acesso</p>
-                    <div className="grid gap-2 sm:grid-cols-3">
-                      {roles.map((role) => (
-                        <button
-                          className={`flex flex-col gap-2 border p-3 text-left transition ${selectedRole === role.id ? 'border-emerald-400 bg-emerald-50' : 'border-slate-200 bg-white hover:border-slate-300'}`}
-                          key={role.id}
-                          onClick={() => setRole(role.id)}
-                        >
-                          <role.icon
-                            className={selectedRole === role.id ? 'text-emerald-700' : 'text-slate-400'}
-                            size={18}
-                          />
-                          <p className={`text-sm font-bold ${selectedRole === role.id ? 'text-emerald-950' : 'text-slate-700'}`}>
-                            {role.title}
-                          </p>
-                          <p className="text-xs leading-4 text-slate-500">{role.text}</p>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {serverError && (
-                  <div className="mb-4 flex items-center gap-2 border border-red-200 bg-red-50 px-3 py-2.5 text-sm font-semibold text-red-700">
-                    <AlertCircle size={14} className="shrink-0" />
-                    {serverError}
-                  </div>
-                )}
-
-                <form className="grid gap-4" onSubmit={handleSubmit}>
-                  {tab === 'register' && (
-                    <label className="grid gap-1.5">
-                      <span className="prop-label">Nome ou razão social *</span>
-                      <input
-                        className={`h-10 border px-3 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/15 ${errors.name ? 'border-red-300 bg-red-50' : 'border-slate-200'}`}
-                        placeholder="Fazenda Santa Cruz"
-                        value={form.name}
-                        onChange={(e) => field('name', e.target.value)}
-                      />
-                      {errors.name && <p className="text-xs text-red-600">{errors.name}</p>}
-                    </label>
-                  )}
-
-                  <label className="grid gap-1.5">
-                    <span className="prop-label">E-mail *</span>
-                    <span className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                      <input
-                        className={`h-10 w-full border pl-9 pr-3 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/15 ${errors.email ? 'border-red-300 bg-red-50' : 'border-slate-200'}`}
-                        placeholder={hintEmail || 'voce@empresa.com.br'}
-                        type="email"
-                        value={form.email}
-                        onChange={(e) => field('email', e.target.value)}
-                      />
-                    </span>
-                    {errors.email && <p className="text-xs text-red-600">{errors.email}</p>}
-                  </label>
-
-                  {tab === 'register' && (
-                    <label className="grid gap-1.5">
-                      <span className="prop-label">Telefone *</span>
-                      <span className="relative">
-                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                        <input
-                          className={`h-10 w-full border pl-9 pr-3 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/15 ${errors.phone ? 'border-red-300 bg-red-50' : 'border-slate-200'}`}
-                          placeholder="(34) 99999-0000"
-                          value={form.phone}
-                          onChange={(e) => field('phone', e.target.value)}
-                        />
-                      </span>
-                      {errors.phone && <p className="text-xs text-red-600">{errors.phone}</p>}
-                    </label>
-                  )}
-
-                  <label className="grid gap-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="prop-label">Senha *</span>
-                      {tab === 'login' && (
-                        <button type="button" onClick={() => setShowReset(true)} className="text-xs font-semibold text-emerald-700 hover:text-emerald-800">
-                          Esqueci a senha
-                        </button>
-                      )}
-                    </div>
-                    <span className="relative">
-                      <LockKeyhole className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                      <input
-                        className={`h-10 w-full border pl-9 pr-10 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/15 ${errors.password ? 'border-red-300 bg-red-50' : 'border-slate-200'}`}
-                        placeholder="••••••••"
-                        type={showPass ? 'text' : 'password'}
-                        value={form.password}
-                        onChange={(e) => field('password', e.target.value)}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPass((v) => !v)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                      >
-                        {showPass ? <EyeOff size={14} /> : <Eye size={14} />}
-                      </button>
-                    </span>
-                    {errors.password && <p className="text-xs text-red-600">{errors.password}</p>}
-                  </label>
-
-                  {tab === 'login' && showReset && (
-                    <div className="grid gap-2 border border-slate-200 bg-slate-50 p-4">
-                      <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Recuperar senha</p>
-                      <input
-                        className="h-10 border border-slate-200 bg-white px-3 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/15"
-                        placeholder="Digite seu e-mail"
-                        type="email"
-                        value={resetEmail}
-                        onChange={(e) => setResetEmail(e.target.value)}
-                      />
-                      <button
-                        type="button"
-                        className="h-10 border border-emerald-500 bg-emerald-50 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 transition-colors"
-                        onClick={async () => {
-                          try {
-                            await authSvc.resetPassword(resetEmail)
-                            setResetSent(true)
-                          } catch (err) {
-                            setServerError(err?.message || 'Erro ao enviar link.')
-                          }
-                        }}
-                      >
-                        Enviar link de recuperação
-                      </button>
-                      {resetSent && (
-                        <p className="text-sm font-semibold text-emerald-600">&#10003; Link enviado para seu e-mail!</p>
-                      )}
-                    </div>
-                  )}
-
-                  <Button className="mt-1 h-11 w-full" type="submit" loading={loading}>
-                    {tab === 'register' ? 'Criar conta e continuar' : 'Entrar na conta'}
-                  </Button>
-                </form>
-
-                <div className="mt-4 flex items-center gap-2 border border-slate-200 bg-slate-50 px-3 py-3 text-xs font-semibold text-slate-600">
-                  <ShieldCheck size={14} className="text-emerald-600" />
-                  Dados protegidos e validação documental antes da primeira negociação.
+          <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+            {/* Role selector (register only) */}
+            {tab === 'register' && (
+              <div>
+                <p className="field-label mb-2">Tipo de conta</p>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {ROLES.map(({ id, title, text, Icon }) => (
+                    <button key={id} type="button" onClick={() => setRole(id)}
+                      className={`flex flex-col items-center gap-2 border-2 p-3 text-center text-xs font-medium transition rounded-sm ${role === id ? 'border-brand-600 bg-brand-50 text-brand-700' : 'border-[hsl(var(--border))] text-[hsl(var(--text-sub))] hover:border-brand-300'}`}>
+                      <Icon size={18} className={role === id ? 'text-brand-600' : 'text-[hsl(var(--muted-fg))]'} />
+                      <span className="font-bold">{title}</span>
+                      <span className="hidden sm:block text-[10px]">{text}</span>
+                    </button>
+                  ))}
                 </div>
-
-                <p className="mt-4 text-center text-sm text-slate-500">
-                  {tab === 'register' ? 'Já tem conta?' : 'Ainda não tem conta?'}{' '}
-                  <button
-                    className="font-bold text-emerald-700 hover:text-emerald-800"
-                    onClick={() => setTab(tab === 'register' ? 'login' : 'register')}
-                  >
-                    {tab === 'register' ? 'Entrar agora' : 'Criar cadastro'}
-                  </button>
-                </p>
               </div>
-            </div>
+            )}
 
-            <Link
-              className="block text-center text-xs font-semibold text-slate-400 transition hover:text-slate-600"
-              to="/"
-            >
-              Voltar para a página inicial
-            </Link>
-          </motion.div>
+            {tab === 'register' && (
+              <FieldGroup label="Nome completo">
+                <input className="field-input" type="text" placeholder="Seu nome completo" value={form.name} onChange={(e) => field('name', e.target.value)} required />
+              </FieldGroup>
+            )}
+
+            <FieldGroup label="E-mail">
+              <div className="relative">
+                <Mail size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[hsl(var(--muted-fg))]" />
+                <input className="field-input pl-9" type="email" placeholder="seu@email.com" value={form.email} onChange={(e) => field('email', e.target.value)} required />
+              </div>
+            </FieldGroup>
+
+            <FieldGroup label="Senha">
+              <div className="relative">
+                <LockKeyhole size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[hsl(var(--muted-fg))]" />
+                <input className="field-input pl-9 pr-10" type={showPw ? 'text' : 'password'} placeholder="Mínimo 6 caracteres" value={form.password} onChange={(e) => field('password', e.target.value)} required />
+                <button type="button" onClick={() => setShowPw((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[hsl(var(--muted-fg))] hover:text-[hsl(var(--text))]">
+                  {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
+              </div>
+            </FieldGroup>
+
+            {error && (
+              <p className="rounded-sm border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700">
+                {error}
+              </p>
+            )}
+
+            <Button type="submit" className="w-full" size="lg" loading={loading}>
+              {!loading && (tab === 'login' ? 'Entrar' : 'Criar conta')}
+            </Button>
+          </form>
+
+          <p className="mt-6 text-center text-xs text-[hsl(var(--muted-fg))]">
+            {tab === 'login' ? 'Não tem conta?' : 'Já tem conta?'}{' '}
+            <button onClick={() => setTab(tab === 'login' ? 'register' : 'login')}
+              className="font-semibold text-brand-600 hover:underline">
+              {tab === 'login' ? 'Cadastrar' : 'Entrar'}
+            </button>
+          </p>
+
+          <div className="mt-6 rounded-sm border border-[hsl(var(--border))] bg-[hsl(var(--muted))] px-4 py-3 text-xs text-[hsl(var(--muted-fg))]">
+            <span className="font-semibold text-[hsl(var(--text))]">Modo demo:</span> qualquer e-mail e senha funcionam — você entra na plataforma sem precisar de cadastro real.
+          </div>
+
+          <p className="mt-4 text-center text-[11px] text-[hsl(var(--muted-fg))]">
+            Ao continuar, você concorda com os <Link to="/#termos" className="text-brand-600 hover:underline">termos de uso</Link> e a{' '}
+            <Link to="/#privacidade" className="text-brand-600 hover:underline">política de privacidade (LGPD)</Link>.
+          </p>
         </div>
       </div>
-    </section>
+    </div>
   )
 }

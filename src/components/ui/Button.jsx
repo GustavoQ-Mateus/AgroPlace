@@ -1,62 +1,50 @@
 import { forwardRef } from 'react'
-import { motion } from 'framer-motion'
+import { cn } from '../../lib/utils'
 
 const variants = {
-  primary:
-    'bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm shadow-emerald-200 disabled:bg-emerald-300',
-  outline:
-    'border-2 border-emerald-600 text-emerald-700 hover:bg-emerald-50 disabled:border-emerald-200 disabled:text-emerald-300',
-  ghost:
-    'text-emerald-700 hover:bg-emerald-50 disabled:text-emerald-300',
-  danger:
-    'bg-red-600 text-white hover:bg-red-700 shadow-sm shadow-red-200 disabled:bg-red-300',
+  primary:  'bg-brand-600 text-white hover:bg-brand-700 disabled:opacity-50',
+  outline:  'border border-[hsl(var(--border))] bg-[hsl(var(--surface))] text-[hsl(var(--text))] hover:bg-[hsl(var(--muted))] disabled:opacity-50',
+  ghost:    'text-[hsl(var(--text))] hover:bg-[hsl(var(--muted))] disabled:opacity-50',
+  danger:   'bg-red-600 text-white hover:bg-red-700 disabled:opacity-50',
+  accent:   'bg-accent-500 text-white hover:bg-accent-600 disabled:opacity-50',
+  link:     'text-brand-600 underline-offset-4 hover:underline p-0 h-auto font-medium',
 }
 
 const sizes = {
-  sm: 'px-3 py-1.5 text-sm',
-  md: 'px-4 py-2.5 text-sm',
-  lg: 'px-6 py-3 text-base',
+  xs:   'h-7  px-2.5 text-xs  gap-1   rounded-[var(--radius)]',
+  sm:   'h-8  px-3   text-sm  gap-1.5 rounded-[var(--radius)]',
+  md:   'h-10 px-4   text-sm  gap-2   rounded-[var(--radius)]',
+  lg:   'h-11 px-5   text-base gap-2  rounded-[var(--radius)]',
+  xl:   'h-12 px-6   text-base gap-2.5 rounded-[var(--radius)]',
+  icon: 'h-9  w-9            rounded-[var(--radius)]',
 }
 
 const Button = forwardRef(function Button(
-  {
-    children,
-    variant = 'primary',
-    size = 'md',
-    loading = false,
-    className = '',
-    disabled,
-    type = 'button',
-    ...props
-  },
+  { variant = 'primary', size = 'md', loading = false, className, children, disabled, type = 'button', ...props },
   ref
 ) {
-  const isDisabled = disabled || loading
-
   return (
-    <motion.button
+    <button
       ref={ref}
-      whileHover={isDisabled ? {} : { scale: 1.02 }}
-      whileTap={isDisabled ? {} : { scale: 0.98 }}
-      transition={{ duration: 0.15 }}
-      className={[
-        'inline-flex items-center justify-center gap-2 font-medium',
-        'transition-colors duration-200 cursor-pointer whitespace-nowrap',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2',
-        'disabled:cursor-not-allowed',
-        variants[variant],
-        sizes[size],
-        className,
-      ].join(' ')}
-      disabled={isDisabled}
       type={type}
+      disabled={disabled || loading}
+      className={cn(
+        'inline-flex shrink-0 items-center justify-center font-semibold transition-colors',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-1',
+        'select-none whitespace-nowrap cursor-pointer disabled:cursor-not-allowed',
+        variants[variant] ?? variants.primary,
+        sizes[size]  ?? sizes.md,
+        className
+      )}
       {...props}
     >
-      {loading && (
-        <span className="h-4 w-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
-      )}
-      {children}
-    </motion.button>
+      {loading ? (
+        <>
+          <span className="h-4 w-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
+          <span>Aguarde…</span>
+        </>
+      ) : children}
+    </button>
   )
 })
 

@@ -1,67 +1,59 @@
 import { Link } from 'react-router-dom'
-import { Facebook, Instagram, Leaf, Mail, MapPin, Phone, Youtube } from 'lucide-react'
+import { Leaf, Instagram, Facebook, Youtube } from 'lucide-react'
 
-const footerGroups = [
-  {
-    title: 'Marketplace',
-    links: [
-      ['Catálogo de animais', '/catalogo'],
-      ['Como comprar', '/comprador'],
-      ['Como vender', '/vendedor'],
-      ['Logística e frete', '/logistica'],
-    ],
-  },
-  {
-    title: 'Espécies',
-    links: [
-      ['Bovinos', '/catalogo?cat=bovinos'],
-      ['Equinos', '/catalogo?cat=equinos'],
-      ['Aves', '/catalogo?cat=aves'],
-      ['Suínos', '/catalogo?cat=suinos'],
-      ['Ovinos', '/catalogo?cat=ovinos'],
-      ['Caprinos', '/catalogo?cat=caprinos'],
-    ],
-  },
-]
+const LINKS = {
+  Plataforma: [
+    ['/catalogo',     'Catálogo'],
+    ['/logistica',    'Frete & Logística'],
+    ['/vendedor',     'Vender'],
+    ['/criar-anuncio','Criar anúncio'],
+  ],
+  Suporte: [
+    ['/auth',       'Login / Cadastro'],
+    ['/comprador',  'Painel do comprador'],
+    ['/#faq',       'Perguntas frequentes'],
+  ],
+  Legal: [
+    ['/#privacidade', 'Privacidade (LGPD)'],
+    ['/#termos',      'Termos de uso'],
+    ['/#cookies',     'Cookies'],
+  ],
+}
 
 export default function Footer() {
   return (
-    <footer className="mt-0 border-t border-emerald-900 bg-emerald-950 text-emerald-100">
-      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+    <footer className="mt-auto border-t border-[hsl(var(--border))] bg-brand-900">
+      <div className="page-container py-12">
+        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           <div>
-            <Link className="mb-4 flex items-center gap-2" to="/">
-              <span className="flex h-7 w-7 items-center justify-center bg-emerald-500 text-white">
+            <Link to="/" className="mb-4 flex items-center gap-2.5">
+              <span className="flex h-7 w-7 items-center justify-center bg-brand-500 text-white rounded-sm">
                 <Leaf size={15} />
               </span>
-              <span className="text-base font-black tracking-tight text-white">
-                Agro<span className="text-emerald-300">Place</span>
+              <span className="text-[15px] font-black tracking-tight text-white">
+                Agro<span className="text-brand-300">Place</span>
               </span>
             </Link>
-            <p className="max-w-xs text-sm leading-6 text-emerald-200/80">
-              Marketplace de animais de produção com compra direta, rastreabilidade e logística integrada.
+            <p className="text-sm leading-6 text-brand-200/80 max-w-[220px]">
+              Marketplace B2B de animais de produção. Rastreabilidade, segurança e logística integrada.
             </p>
             <div className="mt-5 flex gap-2">
-              {[Instagram, Facebook, Youtube].map((Icon, index) => (
-                <a
-                  aria-label={['Instagram', 'Facebook', 'YouTube'][index]}
-                  className="flex h-8 w-8 items-center justify-center border border-emerald-800 text-emerald-300 transition hover:border-emerald-600 hover:text-white"
-                  href="#"
-                  key={Icon.displayName || index}
-                >
+              {[Instagram, Facebook, Youtube].map((Icon, i) => (
+                <a key={i} href="#" aria-label={['Instagram','Facebook','YouTube'][i]}
+                  className="flex h-8 w-8 items-center justify-center border border-brand-700 text-brand-300 transition hover:border-brand-400 hover:text-white rounded-sm">
                   <Icon size={14} />
                 </a>
               ))}
             </div>
           </div>
 
-          {footerGroups.map((group) => (
-            <div key={group.title}>
-              <h3 className="mb-4 text-xs font-bold uppercase tracking-wide text-emerald-400">{group.title}</h3>
-              <ul className="space-y-2">
-                {group.links.map(([label, to]) => (
-                  <li key={label}>
-                    <Link className="text-sm text-emerald-200/80 transition hover:text-white" to={to}>
+          {Object.entries(LINKS).map(([group, links]) => (
+            <div key={group}>
+              <p className="mb-4 text-[10px] font-bold uppercase tracking-widest text-brand-400">{group}</p>
+              <ul className="space-y-2.5">
+                {links.map(([to, label]) => (
+                  <li key={to}>
+                    <Link to={to} className="text-sm text-brand-200/80 transition hover:text-white">
                       {label}
                     </Link>
                   </li>
@@ -69,37 +61,11 @@ export default function Footer() {
               </ul>
             </div>
           ))}
-
-          <div>
-            <h3 className="mb-4 text-xs font-bold uppercase tracking-wide text-emerald-400">Contato</h3>
-            <ul className="space-y-3 text-sm text-emerald-200/80">
-              <li className="flex items-center gap-2">
-                <Phone size={14} />
-                <span>(34) 3300-0000</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <Mail size={14} />
-                <span>suporte@agroplace.com.br</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <MapPin className="mt-0.5 shrink-0" size={14} />
-                <span>
-                  Av. do Agro, 1000
-                  <br />
-                  Uberlândia, MG
-                </span>
-              </li>
-            </ul>
-          </div>
         </div>
 
-        <div className="mt-8 flex flex-col gap-3 border-t border-emerald-800 pt-6 text-xs text-emerald-400 sm:flex-row sm:items-center sm:justify-between">
-          <p>© 2026 AgroPlace. Todos os direitos reservados.</p>
-          <div className="flex gap-4">
-            <a className="transition hover:text-white" href="#">Privacidade</a>
-            <a className="transition hover:text-white" href="#">Termos</a>
-            <a className="transition hover:text-white" href="#">Cookies</a>
-          </div>
+        <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-brand-800 pt-6 sm:flex-row">
+          <p className="text-xs text-brand-400">© {new Date().getFullYear()} AgroPlace. Todos os direitos reservados.</p>
+          <p className="text-xs text-brand-400">Dados protegidos conforme a <span className="font-semibold text-brand-300">LGPD — Lei 13.709/2018</span></p>
         </div>
       </div>
     </footer>

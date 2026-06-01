@@ -1,109 +1,222 @@
-import { Link } from 'react-router-dom'
-import { ArrowRight, CheckCircle2, FileCheck2, MessageSquare, Shield, Truck } from 'lucide-react'
-import AnimalCard from '../components/AnimalCard'
-import CategoryGrid from '../components/sections/CategoryGrid'
-import HeroSection from '../components/sections/HeroSection'
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { ArrowRight, CheckCircle2, ChevronLeft, ChevronRight, FileCheck2, MapPin, MessageSquare, Search, Shield, Truck, TrendingUp, Star } from 'lucide-react'
+import { motion } from 'framer-motion'
 import Button from '../components/ui/Button'
-import { FEATURED_ANIMALS } from '../data/mockAnimals'
+import Badge from '../components/ui/Badge'
+import { FEATURED_ANIMALS, CATEGORIES } from '../data/mockAnimals'
+import { formatCurrency } from '../lib/utils'
 
-function FeaturedSection() {
+const STATS = [
+  ['4.200+', 'Lotes ativos'],
+  ['R$ 380M', 'Negociados em 2025'],
+  ['12.000+', 'Produtores cadastrados'],
+  ['27', 'Estados cobertos'],
+]
+
+const HOW = [
+  { icon: Shield,        n: '01', title: 'Verificação',    text: 'Documentos, vacinação, origem e score de rastreabilidade auditados antes da proposta.' },
+  { icon: MessageSquare, n: '02', title: 'Proposta',       text: 'Negocie diretamente com o produtor: preço, sinal, data de retirada e frete em uma tela.' },
+  { icon: FileCheck2,    n: '03', title: 'Contrato',       text: 'Contrato digital com condições de entrega, sanidade e responsabilidade de ambas as partes.' },
+  { icon: Truck,         n: '04', title: 'Logística',      text: 'Cotação de frete integrada à proposta com transportadoras verificadas e rastreamento.' },
+]
+
+const TESTIMONIALS = [
+  { name: 'Roberto Almeida', role: 'Fazenda Santa Cruz, MG', text: 'Fechei 3 lotes em uma semana. O processo é transparente, sem ligação desnecessária.', rating: 5 },
+  { name: 'Ana Beatriz Lima', role: 'Compradora, SP',        text: 'Consegui comparar 12 lotes de bovinos em menos de 20 minutos. Nunca foi tão fácil.', rating: 5 },
+  { name: 'Carlos Figueiredo', role: 'Haras Bela Vista, GO', text: 'A parte de documentação e rastreabilidade deu uma segurança que eu não tinha antes.', rating: 5 },
+]
+
+function HeroSection() {
+  const navigate = useNavigate()
+  const [q, setQ] = useState('')
+  function handleSearch(e) {
+    e.preventDefault()
+    navigate(`/catalogo${q.trim() ? `?q=${encodeURIComponent(q.trim())}` : ''}`)
+  }
   return (
-    <section className="border-b border-slate-200 bg-slate-50 py-12">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="mb-6 flex items-end justify-between">
-          <div>
-            <p className="section-label mb-1">Lotes em destaque</p>
-            <h2 className="text-2xl font-black text-emerald-950">Oportunidades prontas para análise</h2>
-          </div>
-          <Link to="/catalogo">
-            <Button variant="outline" size="sm">
-              Ver catálogo
-              <ArrowRight size={14} />
-            </Button>
-          </Link>
-        </div>
+    <section className="relative overflow-hidden bg-brand-900 py-20 sm:py-28">
+      {/* Background texture */}
+      <div className="pointer-events-none absolute inset-0 opacity-10"
+        style={{ backgroundImage: 'repeating-linear-gradient(45deg,#fff 0,#fff 1px,transparent 0,transparent 50%)', backgroundSize: '24px 24px' }} />
 
-        <div className="border border-slate-200 bg-white">
-          {/* Column headers */}
-          <div className="hidden grid-cols-[56px_1fr_auto_auto_auto_auto] items-center gap-4 border-b border-slate-200 bg-slate-50 px-5 py-2.5 sm:grid">
-            <span />
-            <span className="prop-label">Lote / Produtor</span>
-            <span className="prop-label text-right">Cabeças</span>
-            <span className="prop-label text-right">Rastreab.</span>
-            <span className="prop-label text-right">Preço total</span>
-            <span />
-          </div>
-          <div>
-            {FEATURED_ANIMALS.slice(0, 8).map((animal, index) => (
-              <AnimalCard animal={animal} index={index} key={animal.id} />
+      <div className="page-container relative">
+        <motion.div className="max-w-2xl" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+          <span className="mb-4 inline-flex items-center gap-2 rounded-sm border border-brand-700 bg-brand-800/60 px-3 py-1 text-xs font-bold uppercase tracking-widest text-brand-300">
+            Marketplace B2B de animais de produção
+          </span>
+          <h1 className="text-4xl font-black leading-[1.1] tracking-tight text-white sm:text-5xl lg:text-6xl">
+            Compre e venda animais com <span className="text-brand-300">rastreabilidade total</span>
+          </h1>
+          <p className="mt-5 text-lg leading-7 text-brand-200/80 max-w-xl">
+            Bovinos, equinos, aves e mais — com documentação, sanidade, frete e contrato digital em uma plataforma segura.
+          </p>
+          <form onSubmit={handleSearch} className="mt-8 flex max-w-lg gap-2">
+            <label className="relative flex-1">
+              <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-brand-400" />
+              <input
+                type="search" value={q} onChange={(e) => setQ(e.target.value)}
+                placeholder="Raça, espécie, cidade…"
+                className="h-11 w-full border border-brand-700 bg-brand-800/60 pl-10 pr-3 text-sm text-white placeholder-brand-400 outline-none transition focus:border-brand-400 focus:ring-2 focus:ring-brand-400/20 rounded-sm"
+              />
+            </label>
+            <Button type="submit" size="lg" className="shrink-0">
+              Buscar <ArrowRight size={16} />
+            </Button>
+          </form>
+          <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2">
+            {['Bovinos Nelore', 'Equinos Marchador', 'Aves Postura', 'Suínos F1'].map((tag) => (
+              <Link key={tag} to={`/catalogo?q=${encodeURIComponent(tag)}`}
+                className="text-sm text-brand-300 underline-offset-2 transition hover:text-white hover:underline">
+                {tag}
+              </Link>
             ))}
           </div>
-          <div className="border-t border-slate-200 bg-slate-50 px-5 py-3 text-center">
-            <Link
-              to="/catalogo"
-              className="text-sm font-bold text-emerald-600 transition hover:text-emerald-800"
-            >
-              Ver todos os lotes disponíveis
-            </Link>
+        </motion.div>
+      </div>
+    </section>
+  )
+}
+
+function StatsBar() {
+  return (
+    <div className="border-b border-[hsl(var(--border))] bg-[hsl(var(--surface))]">
+      <div className="page-container">
+        <div className="grid grid-cols-2 gap-px bg-[hsl(var(--border))] sm:grid-cols-4">
+          {STATS.map(([value, label]) => (
+            <div key={label} className="bg-[hsl(var(--surface))] px-6 py-5 text-center">
+              <p className="text-2xl font-black text-brand-600">{value}</p>
+              <p className="mt-0.5 text-xs font-semibold uppercase tracking-wide text-[hsl(var(--muted-fg))]">{label}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function CategorySection() {
+  return (
+    <section className="py-16 border-b border-[hsl(var(--border))]">
+      <div className="page-container">
+        <div className="mb-8 flex items-end justify-between">
+          <div>
+            <p className="section-eyebrow mb-1">Navegue por espécie</p>
+            <h2 className="section-title text-2xl">Categorias</h2>
           </div>
+          <Link to="/catalogo"><Button variant="outline" size="sm">Ver tudo <ArrowRight size={13} /></Button></Link>
+        </div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          {CATEGORIES.map((cat) => (
+            <Link key={cat.id} to={`/catalogo?cat=${cat.id}`}
+              className="group card card-hover flex flex-col items-center gap-3 px-3 py-5 text-center transition">
+              <div className="relative h-14 w-14 overflow-hidden rounded-full border-2 border-[hsl(var(--border))] group-hover:border-brand-400 transition">
+                <img src={cat.image} alt={cat.label} className="h-full w-full object-cover" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-[hsl(var(--text))] group-hover:text-brand-600 transition">{cat.label}</p>
+                <p className="text-[11px] text-[hsl(var(--muted-fg))]">{cat.count.toLocaleString('pt-BR')} lotes</p>
+              </div>
+            </Link>
+          ))}
         </div>
       </div>
     </section>
   )
 }
 
-function WorkflowSection() {
-  const steps = [
-    {
-      icon: Shield,
-      title: 'Verificação',
-      text: 'Documentos, vacinação, origem e score de rastreabilidade antes da proposta.',
-    },
-    {
-      icon: MessageSquare,
-      title: 'Negociação',
-      text: 'Oferta, contraproposta e aceite com histórico organizado por lote.',
-    },
-    {
-      icon: FileCheck2,
-      title: 'Contrato',
-      text: 'Condições comerciais, documentos fiscais e GTA em um fluxo único.',
-    },
-    {
-      icon: Truck,
-      title: 'Frete',
-      text: 'Cotação por rota, capacidade, bem-estar animal e janela de retirada.',
-    },
-  ]
+function FeaturedListings() {
+  const animals = FEATURED_ANIMALS.slice(0, 6)
+  const [slide, setSlide] = useState(0)
+  const perPage = 3
+  const pages = Math.ceil(animals.length / perPage)
+  const visible = animals.slice(slide * perPage, slide * perPage + perPage)
 
   return (
-    <section className="border-b border-slate-200 bg-white py-12">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <p className="section-label mb-1">Da busca à entrega</p>
-          <h2 className="text-2xl font-black text-emerald-950">Fluxo comercial integrado em quatro etapas</h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-            Cada etapa entrega dados e controles que eliminam a troca de arquivos fora da plataforma.
-          </p>
-        </div>
-
-        <div className="border border-slate-200">
-          <div className="grid divide-y divide-slate-200 sm:grid-cols-4 sm:divide-x sm:divide-y-0">
-            {steps.map((step, index) => (
-              <div key={step.title} className="px-6 py-6">
-                <div className="mb-4 flex items-center gap-3">
-                  <span className="flex h-7 w-7 items-center justify-center bg-emerald-600 text-white text-xs font-black">
-                    {String(index + 1).padStart(2, '0')}
-                  </span>
-                  <h3 className="font-black text-emerald-950">{step.title}</h3>
-                </div>
-                <div className="mb-4 flex h-10 w-10 items-center justify-center border border-slate-200 bg-slate-50 text-emerald-700">
-                  <step.icon size={20} />
-                </div>
-                <p className="text-sm leading-6 text-slate-600">{step.text}</p>
-              </div>
-            ))}
+    <section className="py-16 border-b border-[hsl(var(--border))] bg-[hsl(var(--muted))]">
+      <div className="page-container">
+        <div className="mb-8 flex items-end justify-between">
+          <div>
+            <p className="section-eyebrow mb-1">Destaques</p>
+            <h2 className="section-title text-2xl">Lotes em evidência</h2>
           </div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setSlide((s) => Math.max(0, s - 1))} disabled={slide === 0}
+              className="flex h-8 w-8 items-center justify-center border border-[hsl(var(--border))] bg-[hsl(var(--surface))] text-[hsl(var(--text))] transition hover:bg-brand-600 hover:text-white disabled:opacity-30 rounded-sm">
+              <ChevronLeft size={15} />
+            </button>
+            <button onClick={() => setSlide((s) => Math.min(pages - 1, s + 1))} disabled={slide >= pages - 1}
+              className="flex h-8 w-8 items-center justify-center border border-[hsl(var(--border))] bg-[hsl(var(--surface))] text-[hsl(var(--text))] transition hover:bg-brand-600 hover:text-white disabled:opacity-30 rounded-sm">
+              <ChevronRight size={15} />
+            </button>
+          </div>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {visible.map((a) => (
+            <Link key={a.id} to={`/anuncio/${a.id}`} className="group card card-hover block overflow-hidden">
+              <div className="relative overflow-hidden h-48">
+                <img src={a.image} alt={a.title} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
+                {/* Hover overlay */}
+                <div className="absolute inset-0 flex items-end bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-4">
+                  <Button size="sm" className="w-full">Ver lote <ArrowRight size={13} /></Button>
+                </div>
+                <div className="absolute top-3 left-3">
+                  <Badge variant={a.status === 'Disponível' ? 'active' : 'pending'}>{a.status}</Badge>
+                </div>
+              </div>
+              <div className="p-4">
+                <p className="font-bold text-[hsl(var(--text))] line-clamp-1">{a.title}</p>
+                <div className="mt-1 flex items-center gap-1 text-xs text-[hsl(var(--muted-fg))]">
+                  <MapPin size={11} /> {a.location}
+                </div>
+                <div className="mt-3 flex items-center justify-between">
+                  <div>
+                    <p className="text-[11px] text-[hsl(var(--muted-fg))] uppercase tracking-wide font-semibold">Preço total</p>
+                    <p className="font-black text-brand-600">{formatCurrency(a.price)}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[11px] text-[hsl(var(--muted-fg))] uppercase tracking-wide font-semibold">Cabeças</p>
+                    <p className="font-bold text-[hsl(var(--text))]">{a.quantity?.toLocaleString('pt-BR')}</p>
+                  </div>
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+        <div className="mt-6 flex justify-center gap-1.5">
+          {Array.from({ length: pages }).map((_, i) => (
+            <button key={i} onClick={() => setSlide(i)}
+              className={`h-2 rounded-full transition-all ${i === slide ? 'w-6 bg-brand-600' : 'w-2 bg-[hsl(var(--border))]'}`} />
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function HowItWorks() {
+  return (
+    <section className="py-16 border-b border-[hsl(var(--border))]">
+      <div className="page-container">
+        <div className="mb-10 text-center">
+          <p className="section-eyebrow mb-2">Como funciona</p>
+          <h2 className="section-title">Do anúncio ao frete em 4 etapas</h2>
+          <p className="section-sub mt-3 max-w-lg mx-auto">Processo padronizado para produtores e compradores de qualquer porte.</p>
+        </div>
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {HOW.map(({ icon: Icon, n, title, text }) => (
+            <div key={n} className="card p-6 relative overflow-hidden">
+              <span className="absolute right-4 top-3 text-5xl font-black text-[hsl(var(--border))] leading-none select-none">{n}</span>
+              <div className="mb-4 flex h-10 w-10 items-center justify-center bg-brand-50 border border-brand-200 rounded-sm">
+                <Icon size={18} className="text-brand-600" />
+              </div>
+              <h3 className="font-bold text-[hsl(var(--text))]">{title}</h3>
+              <p className="mt-2 text-sm leading-6 text-[hsl(var(--muted-fg))]">{text}</p>
+            </div>
+          ))}
+        </div>
+        <div className="mt-8 text-center">
+          <Link to="/catalogo"><Button size="lg">Explorar lotes <ArrowRight size={16} /></Button></Link>
         </div>
       </div>
     </section>
@@ -111,49 +224,25 @@ function WorkflowSection() {
 }
 
 function TrustSection() {
-  const testimonials = [
-    ['Carlos Mendes', 'Produtor · Mato Grosso', 'Vendi meu lote em três dias porque o comprador conseguiu validar origem e vacinação sem pedir arquivo por fora.'],
-    ['Ana Paula Rocha', 'Compradora · São Paulo', 'O catálogo ficou muito mais objetivo. Peso, genética, sanidade e frete aparecem no mesmo lugar.'],
-    ['Rodrigo Fonseca', 'Transportadora · Goiás', 'As cotações chegam com rota, volume e janela de coleta. Fica bem mais fácil fechar frete.'],
+  const items = [
+    [CheckCircle2, 'Documentação verificada', 'GTA, vacinas e rastreabilidade auditados antes do anúncio ser publicado.'],
+    [Shield,       'Contrato digital',         'Cláusulas padronizadas de entrega, sanidade e responsabilidade civil.'],
+    [Truck,        'Frete certificado',         'Transportadoras verificadas com licença MAPA e seguro de carga animal.'],
+    [TrendingUp,   'Dados em tempo real',      'Preços de referência, volume negociado e radar de mercado atualizado.'],
   ]
-
   return (
-    <section className="border-b border-slate-200 bg-emerald-950 py-12">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="mb-8 grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
-          <div>
-            <p className="mb-1 text-xs font-bold uppercase tracking-wide text-emerald-400">Confiança operacional</p>
-            <h2 className="text-2xl font-black text-white">Produtores, compradores e transportadoras no mesmo ritmo</h2>
-          </div>
-          <div className="flex items-center gap-2 text-sm font-semibold text-emerald-200">
-            <CheckCircle2 size={14} className="text-emerald-400" />
-            Score médio de rastreabilidade 91%
-          </div>
+    <section className="py-16 border-b border-[hsl(var(--border))] bg-brand-50">
+      <div className="page-container">
+        <div className="mb-10 text-center">
+          <p className="section-eyebrow mb-2">Segurança</p>
+          <h2 className="section-title">Confiança em cada etapa</h2>
         </div>
-
-        {/* Metric strip */}
-        <div className="mb-6 grid grid-cols-3 gap-px bg-emerald-800">
-          {[
-            ['R$ 48M', 'Negociados/mês'],
-            ['12.400', 'Produtores ativos'],
-            ['91%', 'Score médio'],
-          ].map(([value, label]) => (
-            <div key={label} className="bg-emerald-950 px-6 py-5">
-              <p className="text-2xl font-black text-white">{value}</p>
-              <p className="mt-0.5 text-xs font-semibold uppercase tracking-wide text-emerald-400">{label}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* Testimonial rows */}
-        <div className="border border-emerald-800 divide-y divide-emerald-800">
-          {testimonials.map(([name, role, text]) => (
-            <div key={name} className="grid gap-4 px-5 py-4 sm:grid-cols-[180px_1fr] sm:items-center">
-              <div>
-                <p className="text-sm font-bold text-white">{name}</p>
-                <p className="mt-0.5 text-xs text-emerald-400">{role}</p>
-              </div>
-              <p className="text-sm leading-6 text-emerald-100/80">"{text}"</p>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {items.map(([Icon, title, text]) => (
+            <div key={title} className="card p-5">
+              <Icon size={20} className="text-brand-600 mb-3" />
+              <h3 className="font-bold text-[hsl(var(--text))] mb-1.5">{title}</h3>
+              <p className="text-sm leading-6 text-[hsl(var(--muted-fg))]">{text}</p>
             </div>
           ))}
         </div>
@@ -162,33 +251,46 @@ function TrustSection() {
   )
 }
 
-function CtaSection() {
+function TestimonialsSection() {
   return (
-    <section className="bg-white py-12">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="grid gap-8 border border-slate-200 bg-slate-50 p-8 lg:grid-cols-[1fr_auto] lg:items-center">
-          <div>
-            <p className="section-label mb-1">Comece agora</p>
-            <h2 className="text-2xl font-black text-emerald-950">
-              Publique, negocie e entregue com menos atrito
-            </h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-              O onboarding de perfil leva menos de 5 minutos. O catálogo com filtros completos já está disponível para acesso imediato.
-            </p>
-          </div>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Link to="/auth?tab=register&role=vendedor">
-              <Button size="lg">
-                Criar conta vendedora
-                <ArrowRight size={16} />
-              </Button>
-            </Link>
-            <Link to="/catalogo">
-              <Button size="lg" variant="outline">
-                Explorar catálogo
-              </Button>
-            </Link>
-          </div>
+    <section className="py-16 border-b border-[hsl(var(--border))]">
+      <div className="page-container">
+        <div className="mb-10 text-center">
+          <p className="section-eyebrow mb-2">Depoimentos</p>
+          <h2 className="section-title">O que dizem nossos usuários</h2>
+        </div>
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {TESTIMONIALS.map((t) => (
+            <div key={t.name} className="card p-6 flex flex-col gap-4">
+              <div className="flex gap-0.5">
+                {Array.from({ length: t.rating }).map((_, i) => (
+                  <Star key={i} size={14} className="text-accent-500 fill-accent-500" />
+                ))}
+              </div>
+              <p className="text-sm leading-7 text-[hsl(var(--text-sub))] flex-1">"{t.text}"</p>
+              <div>
+                <p className="text-sm font-bold text-[hsl(var(--text))]">{t.name}</p>
+                <p className="text-xs text-[hsl(var(--muted-fg))]">{t.role}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function CTASection() {
+  return (
+    <section className="py-20 bg-brand-900">
+      <div className="page-container text-center">
+        <h2 className="text-3xl font-black text-white sm:text-4xl">Pronto para negociar com segurança?</h2>
+        <p className="mt-4 text-lg text-brand-200/80 max-w-md mx-auto">
+          Crie sua conta gratuitamente e acesse os melhores lotes do Brasil.
+        </p>
+        <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+          <Link to="/auth?tab=register"><Button size="xl">Criar conta grátis <ArrowRight size={16} /></Button></Link>
+          <Link to="/catalogo"><Button size="xl" variant="outline" className="border-brand-600 text-white hover:bg-brand-800">Ver catálogo</Button></Link>
         </div>
       </div>
     </section>
@@ -199,11 +301,13 @@ export default function LandingPage() {
   return (
     <>
       <HeroSection />
-      <CategoryGrid />
-      <FeaturedSection />
-      <WorkflowSection />
+      <StatsBar />
+      <CategorySection />
+      <FeaturedListings />
+      <HowItWorks />
       <TrustSection />
-      <CtaSection />
+      <TestimonialsSection />
+      <CTASection />
     </>
   )
 }

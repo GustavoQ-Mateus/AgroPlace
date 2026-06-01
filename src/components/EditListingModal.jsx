@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { X, Save } from 'lucide-react'
 import Button from './ui/Button'
-import { useApp } from '../context/AppContext'
+import { useUiStore } from '../stores/uiStore'
 import { updateListing } from '../services/listingsService'
 
 const STATES = [
@@ -10,7 +10,7 @@ const STATES = [
 ]
 
 export default function EditListingModal({ listing, onClose, onSaved }) {
-  const { addToast } = useApp()
+  const addToast = useUiStore((s) => s.addToast)
   const [form, setForm] = useState({
     title:       listing.title       || listing.breed ? `${listing.breed} — ${listing.quantity} cabeças` : '',
     description: listing.description || '',

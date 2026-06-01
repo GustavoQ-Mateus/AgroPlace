@@ -1,16 +1,54 @@
-version: '3.9'
-
 services:
-  agroplace:
+
+  mysql:
+    image: mysql:8.0
+    container_name: agroplace-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: agroplace
+      MYSQL_USER: agroplace
+      MYSQL_PASSWORD: agroplace123
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/schema_mysql.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "agroplace", "-pagroplace123"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  api:
+    build:
+      context: ./api
+    image: agroplace-api:latest
+    container_name: agroplace-api
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: agroplace
+      DB_PASS: agroplace123
+      DB_NAME: agroplace
+      JWT_SECRET: ${JWT_SECRET:-agroplace-dev-secret}
+      PORT: 3001
+    ports:
+      - "3001:3001"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
     build:
       context: .
-      args:
-        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
-        VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
-    image: agroplace:latest
+    image: agroplace-frontend:latest
     container_name: agroplace-app
     ports:
       - "80:80"
+    depends_on:
+      - api
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:80"]
@@ -18,3 +56,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
+
+volumes:
+  mysql_data:

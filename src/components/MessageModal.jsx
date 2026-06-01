@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { X, Send, MessageSquare } from 'lucide-react'
 import Button from './ui/Button'
-import { useApp } from '../context/AppContext'
+import { useAuthStore } from '../stores/authStore'
+import { useUiStore } from '../stores/uiStore'
 import * as msgSvc from '../services/messagesService'
 
 export default function MessageModal({ anuncio, sellerId, onClose }) {
-  const { user, addToast } = useApp()
+  const user = useAuthStore((s) => s.user)
+  const addToast = useUiStore((s) => s.addToast)
   const [messages, setMessages] = useState([])
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)

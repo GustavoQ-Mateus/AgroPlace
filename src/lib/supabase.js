@@ -1,19 +1,2 @@
-import { createClient } from '@supabase/supabase-js'
-
-const url = import.meta.env.VITE_SUPABASE_URL
-const key = import.meta.env.VITE_SUPABASE_ANON_KEY
-
-if (!url || !key) {
-  console.warn(
-    '[AgroPlace] VITE_SUPABASE_URL ou VITE_SUPABASE_ANON_KEY não configurados.\n' +
-    'Copie .env.example → .env.local e preencha com suas chaves do Supabase.'
-  )
-}
-
-export const supabase = createClient(url ?? '', key ?? '', {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-  },
-})
+// Supabase removido — use src/lib/api.js
+export const supabase = null

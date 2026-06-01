@@ -1,5 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import * as authSvc   from '../services/authService'
 import * as favSvc    from '../services/favoritesService'
 import * as notifSvc  from '../services/notificationsService'
@@ -9,20 +8,15 @@ export const AppContext = createContext(null)
 let toastId = 0
 
 export function AppProvider({ children }) {
-  const [user, setUser]             = useState(null)
-  const [profile, setProfile]       = useState(null)
+  const [user, setUser]               = useState(null)
+  const [profile, setProfile]         = useState(null)
   const [loadingAuth, setLoadingAuth] = useState(true)
 
-  // Favoritos locais (sincronizados com Supabase quando autenticado)
-  const [savedIds, setSavedIds]     = useState(new Set())
-
-  // Propostas locais (fallback offline)
-  const [proposals, setProposals]   = useState([])
-  const [listings, setListings]     = useState([])
-
-  const [toasts, setToasts]         = useState([])
-  const [notifications, setNotifications]  = useState([])
-  const unsubNotifs                 = useRef(null)
+  const [savedIds, setSavedIds]       = useState(new Set())
+  const [proposals, setProposals]     = useState([])
+  const [listings, setListings]       = useState([])
+  const [toasts, setToasts]           = useState([])
+  const [notifications, setNotifications] = useState([])
 
   // ── Toast ──────────────────────────────────────────────────
   function addToast(message, type = 'success') {
@@ -37,9 +31,7 @@ export function AppProvider({ children }) {
   // ── Notificações browser ──────────────────────────────────
   function requestBrowserNotifPermission() {
     if (!('Notification' in window)) return
-    if (Notification.permission === 'default') {
-      Notification.requestPermission()
-    }
+    if (Notification.permission === 'default') Notification.requestPermission()
   }
 
   function sendBrowserNotif(title, body) {
@@ -48,55 +40,29 @@ export function AppProvider({ children }) {
     }
   }
 
-  // ── Notificações Supabase ─────────────────────────────────
-  function setupNotifSubscription(userId) {
-    if (unsubNotifs.current) unsubNotifs.current()
-    unsubNotifs.current = notifSvc.subscribeNotifications(userId, (notif) => {
-      setNotifications((prev) => [notif, ...prev])
-      addToast(notif.title, 'info')
-      sendBrowserNotif(notif.title, notif.body || '')
-    })
-  }
-
   // ── Auth bootstrap ─────────────────────────────────────────
   useEffect(() => {
-    // Carrega sessão inicial
     authSvc.getSession().then(async (session) => {
       if (session?.user) {
         setUser(session.user)
-        await loadProfile(session.user.id)
-        setupNotifSubscription(session.user.id)
+        setProfile(buildProfile(session.user))
+        await loadFavorites()
+        await loadNotifications()
       }
       setLoadingAuth(false)
     })
-
-    // Solicita permissão de notificações do browser
     requestBrowserNotifPermission()
-
-    // Listener de mudanças de auth
-    const unsub = authSvc.onAuthChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        setUser(session.user)
-        await loadProfile(session.user.id)
-        await loadFavorites()
-        setupNotifSubscription(session.user.id)
-      } else if (event === 'SIGNED_OUT') {
-        setUser(null)
-        setProfile(null)
-        setSavedIds(new Set())
-        setProposals([])
-        if (unsubNotifs.current) { unsubNotifs.current(); unsubNotifs.current = null }
-      }
-    })
-
-    return unsub
   }, [])
 
-  async function loadProfile(userId) {
-    try {
-      const p = await authSvc.getMyProfile()
-      setProfile(p)
-    } catch {}
+  function buildProfile(u) {
+    return {
+      id:       u.id,
+      role:     u.role || u.user_metadata?.role || 'comprador',
+      name:     u.name || u.user_metadata?.name || u.email?.split('@')[0],
+      email:    u.email,
+      avatar:   u.avatar || u.email?.slice(0, 2).toUpperCase(),
+      verified: u.verified || false,
+    }
   }
 
   async function loadFavorites() {
@@ -106,31 +72,36 @@ export function AppProvider({ children }) {
     } catch {}
   }
 
+  async function loadNotifications() {
+    try {
+      const list = await notifSvc.getNotifications()
+      setNotifications(list)
+    } catch {}
+  }
+
   // ── Login ──────────────────────────────────────────────────
   async function login(email, password, role) {
     try {
       const { user: u } = await authSvc.login({ email, password })
-      // profile será carregado pelo listener onAuthChange
+      setUser(u)
+      setProfile(buildProfile(u))
+      await loadFavorites()
+      await loadNotifications()
       addToast('Bem-vindo de volta!')
       return u
-    } catch (err) {
-      // Modo demo: aceita qualquer email/senha
+    } catch {
+      // Modo demo: aceita qualquer credencial quando API não está disponível
       const demo = {
         id:    'demo-' + Date.now(),
         email,
-        user_metadata: { role: role || 'comprador', name: email.split('@')[0] },
-      }
-      const demoProfile = {
-        id:      demo.id,
-        role:    role || 'comprador',
-        name:    email.split('@')[0],
-        email,
-        avatar:  email.slice(0, 2).toUpperCase(),
+        role:  role || 'comprador',
+        name:  email.split('@')[0],
+        avatar: email.slice(0, 2).toUpperCase(),
         verified: false,
       }
       setUser(demo)
-      setProfile(demoProfile)
-      addToast(`Bem-vindo, ${demoProfile.name}! (modo demo)`)
+      setProfile(demo)
+      addToast(`Bem-vindo, ${demo.name}! (modo demo)`)
       return demo
     }
   }
@@ -138,7 +109,9 @@ export function AppProvider({ children }) {
   // ── Register ───────────────────────────────────────────────
   async function register({ email, password, name, phone, role }) {
     const { user: u } = await authSvc.register({ email, password, name, phone, role })
-    addToast('Conta criada! Verifique seu e-mail se necessário.')
+    setUser(u)
+    setProfile(buildProfile(u))
+    addToast('Conta criada com sucesso!')
     return u
   }
 
@@ -149,6 +122,7 @@ export function AppProvider({ children }) {
     setProfile(null)
     setSavedIds(new Set())
     setProposals([])
+    setNotifications([])
     addToast('Sessão encerrada.', 'info')
   }
 
@@ -166,7 +140,7 @@ export function AppProvider({ children }) {
     try {
       await favSvc.toggleFavorite(anuncioId)
     } catch {
-      // Reverte estado local em caso de erro
+      // Reverte em caso de erro
       setSavedIds((prev) => {
         const next = new Set(prev)
         if (nowSaved) next.delete(anuncioId)
@@ -184,7 +158,7 @@ export function AppProvider({ children }) {
     return proposal
   }
 
-  // ── Anúncios locais (criados sem Supabase configurado) ─────
+  // ── Anúncios locais ────────────────────────────────────────
   function addListing(listing) {
     const item = { ...listing, id: 'lst-' + Date.now(), status: 'Ativo', daysListed: 0 }
     setListings((prev) => [item, ...prev])

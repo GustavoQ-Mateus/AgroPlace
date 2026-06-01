@@ -1,47 +1,45 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import {
-  ArrowRight, BarChart3, CheckCircle2, ClipboardCheck, DollarSign,
-  Edit2, Eye, FilePlus2, MoreHorizontal, PackageCheck, Plus,
-  ShieldCheck, Trash2, TrendingUp,
-} from 'lucide-react'
+import { ArrowRight, BarChart3, CheckCircle2, DollarSign, Edit2, Eye, FilePlus2, MoreHorizontal, PackageCheck, Plus, ShieldCheck, Trash2, TrendingUp } from 'lucide-react'
 import Button from '../components/ui/Button'
-import EditListingModal from '../components/EditListingModal'
-import OnboardingModal from '../components/OnboardingModal'
+import Badge from '../components/ui/Badge'
 import { FEATURED_ANIMALS } from '../data/mockAnimals'
-import { formatCurrency } from '../utils/formatters'
-import { useApp } from '../context/AppContext'
-import { deleteListing, updateListingStatus } from '../services/listingsService'
+import { formatCurrency } from '../lib/utils'
+import { useUiStore } from '../stores/uiStore'
+import { useMyListings, useDeleteListing } from '../hooks/useAnimals'
+import { updateListingStatus } from '../services/listingsService'
 
-const OB_KEY = 'agroplace_onboarding_done'
-
-const metrics = [
+const METRICS = [
   ['Receita em propostas', 'R$ 412.000', DollarSign, '+12% vs. mês anterior'],
   ['Lotes ativos', '8', PackageCheck, '3 com proposta aberta'],
   ['Score médio', '93%', ShieldCheck, 'Acima da média da plataforma'],
-  ['Documentos pendentes', '3', ClipboardCheck, 'Requer ação'],
+  ['Documentos pendentes', '3', CheckCircle2, 'Requer ação'],
 ]
 
+const FUNNEL = [
+  ['Visualizações',        '1.284', 100],
+  ['Propostas recebidas',  '23',    78],
+  ['Contratos em aceite',  '4',     45],
+  ['Fretes cotados',       '11',    60],
+]
+
+const WIZARD_STEPS = ['Dados do lote', 'Fotos e vídeos', 'Rastreabilidade', 'Preço e frete']
+
 export default function SellerDashboard() {
-  const { listings, addToast } = useApp()
-  const [openMenu, setOpenMenu] = useState(null)
+  const addToast = useUiStore((s) => s.addToast)
+  const { data: apiListings = [] } = useMyListings()
+  const deleteMutation = useDeleteListing()
+
+  const listings = apiListings.length ? apiListings : FEATURED_ANIMALS.slice(0, 5)
   const [localListings, setLocalListings] = useState(null)
-  const [editingListing, setEditingListing] = useState(null)
-  const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem(OB_KEY))
+  const [openMenu, setOpenMenu] = useState(null)
 
-  function closeOnboarding() {
-    localStorage.setItem(OB_KEY, '1')
-    setShowOnboarding(false)
-  }
-
-  const allListings = localListings !== null
-    ? localListings
-    : [...listings, ...FEATURED_ANIMALS.slice(0, 5)]
+  const all = localListings ?? listings
 
   async function handleDelete(id) {
     try {
-      await deleteListing(id)
-      setLocalListings((prev) => (prev !== null ? prev : allListings).filter((l) => String(l.id) !== String(id)))
+      await deleteMutation.mutateAsync(id)
+      setLocalListings((prev) => (prev ?? all).filter((l) => String(l.id) !== String(id)))
       addToast('Anúncio excluído com sucesso')
     } catch {
       addToast('Erro ao excluir anúncio', 'error')
@@ -50,14 +48,12 @@ export default function SellerDashboard() {
   }
 
   async function handlePause(id) {
-    const current = (localListings !== null ? localListings : allListings).find((l) => String(l.id) === String(id))
-    const newStatus = current?.status === 'PAUSADO' ? 'ATIVO' : 'PAUSADO'
+    const item = (localListings ?? all).find((l) => String(l.id) === String(id))
+    const next = item?.status === 'PAUSADO' ? 'ATIVO' : 'PAUSADO'
     try {
-      await updateListingStatus(id, newStatus)
-      setLocalListings((prev) => (prev !== null ? prev : allListings).map((l) =>
-        String(l.id) === String(id) ? { ...l, status: newStatus } : l
-      ))
-      addToast(newStatus === 'PAUSADO' ? 'Anúncio pausado.' : 'Anúncio reativado.', 'info')
+      await updateListingStatus(id, next)
+      setLocalListings((prev) => (prev ?? all).map((l) => String(l.id) === String(id) ? { ...l, status: next } : l))
+      addToast(next === 'PAUSADO' ? 'Anúncio pausado.' : 'Anúncio reativado.', 'info')
     } catch {
       addToast('Erro ao atualizar anúncio.', 'error')
     }
@@ -66,10 +62,10 @@ export default function SellerDashboard() {
 
   function handleExport() {
     const rows = [
-      ['Especie', 'Quantidade', 'Preco Unitario', 'Cidade', 'Estado', 'Status'],
-      ...allListings.map(l => [l.especie || l.category || '', l.quantidade || l.quantity || '', l.preco_unitario || l.pricePerHead || '', l.cidade || '', l.estado || '', l.status || ''])
+      ['Especie', 'Quantidade', 'Preco', 'Cidade', 'Estado', 'Status'],
+      ...all.map((l) => [l.especie || l.category || '', l.quantidade || l.quantity || '', l.preco_unitario || l.pricePerHead || '', l.cidade || '', l.estado || '', l.status || ''])
     ]
-    const csv = rows.map(r => r.map(v => '"' + v + '"').join(',')).join('\n')
+    const csv = rows.map((r) => r.map((v) => `"${v}"`).join(',')).join('\n')
     const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -77,136 +73,103 @@ export default function SellerDashboard() {
     URL.revokeObjectURL(url)
   }
 
+  function statusVariant(status) {
+    if (!status) return 'paused'
+    const s = status.toLowerCase()
+    if (s === 'ativo' || s === 'disponível') return 'active'
+    if (s === 'proposta' || s === 'aceita') return 'pending'
+    return 'paused'
+  }
+
   return (
-    <section className="min-h-screen bg-slate-50 pt-14">
-      {/* Page header */}
-      <div className="border-b border-slate-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-4 py-6 sm:flex-row sm:items-end sm:justify-between">
+    <div className="min-h-screen bg-[hsl(var(--bg))]">
+      {/* Page header + metrics */}
+      <div className="border-b border-[hsl(var(--border))] bg-[hsl(var(--surface))]">
+        <div className="page-container">
+          <div className="flex flex-col gap-4 py-5 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="section-label mb-1">Dashboard vendedor</p>
-              <h1 className="text-2xl font-black text-emerald-950 sm:text-3xl">
-                Gestão de anúncios e propostas
-              </h1>
-              <p className="mt-1.5 text-sm leading-6 text-slate-600">
-                Acompanhe desempenho dos lotes, documentos, negociações e cadastre animais em etapas.
-              </p>
+              <p className="section-eyebrow mb-1">Dashboard vendedor</p>
+              <h1 className="text-2xl font-black text-[hsl(var(--text))]">Gestão de anúncios e propostas</h1>
+              <p className="mt-1 text-sm text-[hsl(var(--muted-fg))]">Acompanhe desempenho dos lotes, documentos e negociações.</p>
             </div>
             <Link to="/criar-anuncio">
-              <Button>
-                <Plus size={15} />
-                Novo anúncio
-              </Button>
+              <Button size="md"><Plus size={14} /> Novo anúncio</Button>
             </Link>
           </div>
 
-          {/* Metrics strip */}
-          <div className="grid grid-cols-2 gap-px border-t border-slate-200 bg-slate-200 lg:grid-cols-4">
-            {metrics.map(([label, value, Icon, sub]) => (
-              <div key={label} className="bg-white px-5 py-4">
+          {/* Metric cards */}
+          <div className="grid grid-cols-2 gap-px border-t border-[hsl(var(--border))] bg-[hsl(var(--border))] lg:grid-cols-4">
+            {METRICS.map(([label, value, Icon, sub]) => (
+              <div key={label} className="bg-[hsl(var(--surface))] px-5 py-4">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-bold uppercase tracking-wide text-slate-400">{label}</p>
-                  <Icon className="text-emerald-600" size={15} />
+                  <p className="field-label">{label}</p>
+                  <Icon className="text-brand-600" size={14} />
                 </div>
-                <p className="mt-2 text-2xl font-black text-emerald-950">{value}</p>
-                <p className="mt-0.5 text-xs text-slate-500">{sub}</p>
+                <p className="mt-2 text-2xl font-black text-[hsl(var(--text))]">{value}</p>
+                <p className="mt-0.5 text-xs text-[hsl(var(--muted-fg))]">{sub}</p>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 pb-16 pt-6 sm:px-6 lg:px-8">
-        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+      <div className="page-container py-6">
+        <div className="grid gap-5 lg:grid-cols-[1fr_300px]">
           {/* Listings table */}
-          <div className="border border-slate-200 bg-white">
+          <div className="card">
             <div className="panel-header">
-              <h2 className="font-black text-emerald-950">
-                Meus anúncios
-                <span className="ml-2 text-sm font-semibold text-slate-400">({allListings.length})</span>
+              <h2 className="font-bold text-[hsl(var(--text))]">
+                Meus anúncios <span className="text-sm font-semibold text-[hsl(var(--muted-fg))]">({all.length})</span>
               </h2>
               <div className="flex gap-2">
-                <Link to="/criar-anuncio">
-                  <Button size="sm">
-                    <Plus size={13} />
-                    Novo
-                  </Button>
-                </Link>
+                <Link to="/criar-anuncio"><Button size="sm"><Plus size={12} /> Novo</Button></Link>
                 <Button size="sm" variant="outline" onClick={handleExport}>Exportar</Button>
               </div>
             </div>
 
-            {/* Table header */}
-            <div className="hidden grid-cols-[72px_1fr_auto_auto] gap-4 border-b border-slate-100 bg-slate-50 px-5 py-2.5 sm:grid">
-              <span />
-              <span className="prop-label">Lote / Status</span>
-              <span className="prop-label text-right">Rastreab.</span>
-              <span />
+            <div className="hidden grid-cols-[64px_1fr_auto_auto] gap-4 border-b border-[hsl(var(--border))] bg-[hsl(var(--muted))] px-5 py-2 sm:grid">
+              <span /><span className="field-label">Lote / Status</span><span className="field-label text-right">Rastreab.</span><span />
             </div>
 
-            <div className="divide-y divide-slate-100">
-              {allListings.map((animal) => (
-                <div
-                  className="grid items-center gap-4 px-5 py-4 sm:grid-cols-[72px_1fr_auto_auto]"
-                  key={animal.id}
-                >
-                  <img alt={animal.title} className="h-16 w-16 bg-slate-200 object-cover" src={animal.image} />
+            <div className="divide-y divide-[hsl(var(--border))]">
+              {all.map((a) => (
+                <div key={a.id} className="grid items-center gap-4 px-5 py-4 sm:grid-cols-[64px_1fr_auto_auto]">
+                  <img alt={a.title} className="h-14 w-14 object-cover rounded-sm" src={a.image} />
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="font-bold text-emerald-950">{animal.title}</h3>
-                      <span className={`px-2 py-0.5 text-xs font-bold ${
-                        animal.status === 'Ativo'
-                          ? 'border border-emerald-200 bg-emerald-50 text-emerald-700'
-                          : animal.status === 'Proposta'
-                            ? 'border border-amber-200 bg-amber-50 text-amber-700'
-                            : 'border border-slate-200 bg-slate-50 text-slate-500'
-                      }`}>
-                        {animal.status}
-                      </span>
+                      <p className="font-bold text-[hsl(var(--text))]">{a.title}</p>
+                      <Badge variant={statusVariant(a.status)}>{a.status}</Badge>
                     </div>
-                    <p className="mt-1 text-sm text-slate-500">
-                      {animal.location} · {animal.quantity?.toLocaleString('pt-BR')} cabeças · {formatCurrency(animal.price)}
+                    <p className="mt-1 text-xs text-[hsl(var(--muted-fg))]">
+                      {a.location} · {a.quantity?.toLocaleString('pt-BR')} cabeças · {formatCurrency(a.price)}
                     </p>
                   </div>
                   <div className="hidden text-right sm:block">
-                    <p className="text-sm font-black text-emerald-700">{animal.traceability}%</p>
-                    <div className="mt-1.5 h-1.5 w-20 overflow-hidden bg-slate-100">
-                      <div className="h-full bg-emerald-600" style={{ width: `${animal.traceability}%` }} />
+                    <p className="text-sm font-black text-brand-600">{a.traceability}%</p>
+                    <div className="mt-1.5 h-1.5 w-20 overflow-hidden bg-[hsl(var(--muted))] rounded-full">
+                      <div className="h-full bg-brand-600 rounded-full" style={{ width: `${a.traceability}%` }} />
                     </div>
                   </div>
                   <div className="relative flex items-center gap-2">
-                    <Link to={`/anuncio/${animal.id}`}>
-                      <Button size="sm" variant="outline">
-                        <Eye size={13} />
-                        Ver
-                      </Button>
+                    <Link to={`/anuncio/${a.id}`}>
+                      <Button size="sm" variant="outline"><Eye size={12} /> Ver</Button>
                     </Link>
                     <div className="relative">
                       <button
                         aria-label="Mais opções"
-                        className="flex h-8 w-8 items-center justify-center text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
-                        onClick={() => setOpenMenu(openMenu === animal.id ? null : animal.id)}
+                        onClick={() => setOpenMenu(openMenu === a.id ? null : a.id)}
+                        className="flex h-8 w-8 items-center justify-center text-[hsl(var(--muted-fg))] transition hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--text))] rounded-sm"
                       >
                         <MoreHorizontal size={16} />
                       </button>
-                      {openMenu === animal.id && (
-                        <div className="absolute right-0 top-full z-10 mt-1 min-w-40 border border-slate-200 bg-white py-1 shadow-lg">
-                          <button
-                            onClick={() => { setEditingListing(animal); setOpenMenu(null) }}
-                            className="flex w-full items-center gap-2 px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
-                          >
-                            <Edit2 size={13} /> Editar anúncio
+                      {openMenu === a.id && (
+                        <div className="absolute right-0 top-full z-10 mt-1 min-w-[160px] border border-[hsl(var(--border))] bg-[hsl(var(--surface))] py-1 shadow-card rounded-sm">
+                          <button onClick={() => handlePause(a.id)}
+                            className="flex w-full items-center gap-2 px-4 py-2.5 text-sm font-medium text-[hsl(var(--text-sub))] hover:bg-[hsl(var(--muted))]">
+                            <TrendingUp size={13} /> {a.status === 'PAUSADO' ? 'Reativar' : 'Pausar'}
                           </button>
-                          <button
-                            onClick={() => handlePause(animal.id)}
-                            className="flex w-full items-center gap-2 px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
-                          >
-                            <TrendingUp size={13} /> Pausar
-                          </button>
-                          <button
-                            onClick={() => handleDelete(animal.id)}
-                            className="flex w-full items-center gap-2 px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50"
-                          >
+                          <button onClick={() => handleDelete(a.id)}
+                            className="flex w-full items-center gap-2 px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50">
                             <Trash2 size={13} /> Remover
                           </button>
                         </div>
@@ -217,15 +180,13 @@ export default function SellerDashboard() {
               ))}
             </div>
 
-            {allListings.length === 0 && (
+            {all.length === 0 && (
               <div className="flex flex-col items-center justify-center py-16 text-center">
-                <PackageCheck size={32} className="mb-3 text-slate-300" />
-                <p className="font-black text-slate-600">Nenhum anúncio ainda</p>
-                <p className="mt-1 text-sm text-slate-500">Publique seu primeiro lote agora.</p>
+                <PackageCheck size={32} className="mb-3 text-[hsl(var(--border))]" />
+                <p className="font-bold text-[hsl(var(--text))]">Nenhum anúncio ainda</p>
+                <p className="mt-1 text-sm text-[hsl(var(--muted-fg))]">Publique seu primeiro lote agora.</p>
                 <Link to="/criar-anuncio" className="mt-4">
-                  <Button size="sm">
-                    <Plus size={13} /> Criar anúncio
-                  </Button>
+                  <Button size="sm"><Plus size={13} /> Criar anúncio</Button>
                 </Link>
               </div>
             )}
@@ -233,78 +194,55 @@ export default function SellerDashboard() {
 
           {/* Sidebar */}
           <aside className="space-y-4">
-            {/* Quick action */}
-            <div className="border border-emerald-200 bg-emerald-50">
-              <div className="flex items-start gap-3 px-5 py-4">
-                <CheckCircle2 className="mt-0.5 shrink-0 text-emerald-600" size={18} />
+            {/* Quick CTA */}
+            <div className="card border-brand-200 bg-brand-50">
+              <div className="flex items-start gap-3 px-4 py-4">
+                <CheckCircle2 className="mt-0.5 shrink-0 text-brand-600" size={17} />
                 <div>
-                  <p className="font-black text-emerald-950">Publique mais lotes</p>
-                  <p className="mt-0.5 text-sm text-emerald-700">Vendedores com 3+ lotes ativos recebem 4x mais propostas.</p>
+                  <p className="font-bold text-brand-950 text-sm">Publique mais lotes</p>
+                  <p className="mt-0.5 text-xs text-brand-700">Vendedores com 3+ lotes ativos recebem 4x mais propostas.</p>
                 </div>
               </div>
-              <div className="border-t border-emerald-200 px-5 py-3">
-                <Link to="/criar-anuncio">
-                  <Button className="w-full" size="sm">
-                    <Plus size={13} />
-                    Criar novo anúncio
-                  </Button>
-                </Link>
+              <div className="border-t border-brand-200 px-4 py-3">
+                <Link to="/criar-anuncio"><Button className="w-full" size="sm"><Plus size={13} /> Criar novo anúncio</Button></Link>
               </div>
             </div>
 
             {/* Wizard */}
-            <div className="border border-slate-200 bg-white">
+            <div className="card">
               <div className="panel-header">
-                <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-600">
-                  <FilePlus2 size={14} className="text-emerald-700" />
-                  Wizard de cadastro
-                </h2>
+                <h2 className="flex items-center gap-2 field-label"><FilePlus2 size={13} className="text-brand-600" /> Wizard de cadastro</h2>
               </div>
-              <div className="divide-y divide-slate-100">
-                {['Dados do lote', 'Fotos e vídeos', 'Rastreabilidade', 'Preço e frete'].map((step, index) => (
-                  <div className="flex items-center gap-3 px-4 py-3.5" key={step}>
-                    <span className={`flex h-7 w-7 shrink-0 items-center justify-center text-xs font-black ${index < 2 ? 'bg-emerald-600 text-white' : 'border border-slate-200 bg-white text-slate-400'}`}>
-                      {index + 1}
+              <div className="divide-y divide-[hsl(var(--border))]">
+                {WIZARD_STEPS.map((step, i) => (
+                  <div key={step} className="flex items-center gap-3 px-4 py-3.5">
+                    <span className={`flex h-7 w-7 shrink-0 items-center justify-center text-xs font-black rounded-sm ${i < 2 ? 'bg-brand-600 text-white' : 'border border-[hsl(var(--border))] text-[hsl(var(--muted-fg))]'}`}>
+                      {i + 1}
                     </span>
-                    <span className={`text-sm font-semibold ${index < 2 ? 'text-slate-800' : 'text-slate-400'}`}>
-                      {step}
-                    </span>
-                    {index < 2 && <ShieldCheck className="ml-auto text-emerald-600" size={14} />}
+                    <span className={`text-sm font-semibold ${i < 2 ? 'text-[hsl(var(--text))]' : 'text-[hsl(var(--muted-fg))]'}`}>{step}</span>
+                    {i < 2 && <ShieldCheck className="ml-auto text-brand-600" size={13} />}
                   </div>
                 ))}
               </div>
-              <div className="border-t border-slate-200 p-4">
-                <Link to="/criar-anuncio">
-                  <Button className="w-full">
-                    Continuar cadastro
-                    <ArrowRight size={14} />
-                  </Button>
-                </Link>
+              <div className="border-t border-[hsl(var(--border))] p-4">
+                <Link to="/criar-anuncio"><Button className="w-full">Continuar cadastro <ArrowRight size={14} /></Button></Link>
               </div>
             </div>
 
             {/* Funnel */}
-            <div className="border border-slate-200 bg-white">
+            <div className="card">
               <div className="panel-header">
-                <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-600">
-                  <BarChart3 size={14} className="text-emerald-700" />
-                  Funil da semana
-                </h2>
+                <h2 className="flex items-center gap-2 field-label"><BarChart3 size={13} className="text-brand-600" /> Funil da semana</h2>
               </div>
-              <div className="divide-y divide-slate-100">
-                {[
-                  ['Visualizações', '1.284', 100],
-                  ['Propostas recebidas', '23', 78],
-                  ['Contratos em aceite', '4', 45],
-                  ['Fretes cotados', '11', 60],
-                ].map(([label, value, pct]) => (
-                  <div className="px-4 py-3" key={label}>
+              <div className="divide-y divide-[hsl(var(--border))]">
+                {FUNNEL.map(([label, value, pct]) => (
+                  <div key={label} className="px-4 py-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-slate-600">{label}</span>
-                      <span className="text-sm font-black text-emerald-950">{value}</span>
+                      <span className="text-sm text-[hsl(var(--text-sub))]">{label}</span>
+                      <span className="text-sm font-black text-[hsl(var(--text))]">{value}</span>
                     </div>
-                    <div className="mt-2 h-1 bg-slate-100">
-                      <div className="h-full bg-emerald-600 transition-all" style={{ width: `${pct}%` }} />
+                    <div className="mt-2 h-1 bg-[hsl(var(--muted))] rounded-full">
+                      <div className="h-full bg-brand-600 rounded-full transition-all" style={{ width: `${pct}%` }} />
                     </div>
                   </div>
                 ))}
@@ -313,23 +251,6 @@ export default function SellerDashboard() {
           </aside>
         </div>
       </div>
-      {editingListing && (
-        <EditListingModal
-          listing={editingListing}
-          onClose={() => setEditingListing(null)}
-          onSaved={(updated) => {
-            setLocalListings((prev) =>
-              (prev !== null ? prev : allListings).map((l) =>
-                String(l.id) === String(updated.id) ? { ...l, ...updated } : l
-              )
-            )
-          }}
-        />
-      )}
-
-      {showOnboarding && (
-        <OnboardingModal role="vendedor" onClose={closeOnboarding} />
-      )}
-    </section>
+    </div>
   )
 }

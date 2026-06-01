@@ -1,241 +1,184 @@
-import { Link } from 'react-router-dom'
-import { CalendarCheck2, CheckCircle2, Clock3, FileText, MapPinned, PackageSearch, Search, Truck } from 'lucide-react'
-import Button from '../components/ui/Button'
-import { FEATURED_ANIMALS, ORDERS } from '../data/mockAnimals'
-import { useApp } from '../context/AppContext'
-import OnboardingModal from '../components/OnboardingModal'
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
+import { CalendarCheck2, CheckCircle2, Clock3, FileText, Heart, MapPinned, PackageSearch, Search, Truck } from 'lucide-react'
+import Button from '../components/ui/Button'
+import Badge from '../components/ui/Badge'
+import { FEATURED_ANIMALS } from '../data/mockAnimals'
+import { formatCurrency } from '../lib/utils'
+import { useFavorites, useToggleFavorite } from '../hooks/useFavorites'
 
-const OB_KEY_BUYER = 'agroplace_onboarding_buyer_done'
+const MOCK_PROPOSALS = [
+  { id: 'p1', animal: 'Lote Nelore Confinado PO', date: '28/05/2026', status: 'Aguardando', amount: 190000 },
+  { id: 'p2', animal: 'Lote Angus Nelore ½ Sangue', date: '20/05/2026', status: 'Aceita', amount: 168000 },
+]
+
+const STEPS = [
+  [CheckCircle2, 'Proposta enviada',    'Concluído',        'done'],
+  [Clock3,       'Aceite do vendedor',  'Aguardando',       'active'],
+  [FileText,     'Contrato e sinal',    'Após aceite',      'idle'],
+  [Truck,        'Frete e retirada',    '7 a 12 de junho',  'idle'],
+]
 
 const stateStyle = {
-  done:   'bg-emerald-600 text-white border-emerald-600',
-  active: 'bg-amber-50 text-amber-700 border-amber-300',
-  idle:   'bg-white text-slate-400 border-slate-200',
+  done:   'bg-brand-600 text-white border-brand-600',
+  active: 'bg-accent-50 text-accent-700 border-accent-300',
+  idle:   'bg-[hsl(var(--surface))] text-[hsl(var(--muted-fg))] border-[hsl(var(--border))]',
 }
 
 export default function BuyerDashboard() {
-  const { proposals, savedAnimals, toggleSave, addToast } = useApp()
-  const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem(OB_KEY_BUYER))
-  function closeOnboarding() { localStorage.setItem(OB_KEY_BUYER, '1'); setShowOnboarding(false) }
-
-  // Lotes salvos reais: busca nos FEATURED_ANIMALS pelo ID
-  const savedList = FEATURED_ANIMALS.filter((a) => savedAnimals.has(a.id))
-
-  const allOrders = [
-    ...proposals.map((p) => ({
-      id: p.id,
-      animal: p.animal,
-      date: new Date(p.createdAt).toLocaleDateString('pt-BR'),
-      status: p.status,
-      amount: p.price,
-    })),
-    ...ORDERS,
-  ]
-
-  const timeline = [
-    ['Proposta enviada', proposals.length > 0 ? 'Enviada' : 'Aguardando', CheckCircle2, proposals.length > 0 ? 'done' : 'idle'],
-    ['Aceite do vendedor', 'Aguardando retorno', Clock3, proposals.length > 0 ? 'active' : 'idle'],
-    ['Contrato e sinal', 'Após aceite', FileText, 'idle'],
-    ['Frete e retirada', '7 a 12 de maio', Truck, 'idle'],
-  ]
+  const { data: favIds = [] } = useFavorites()
+  const toggle = useToggleFavorite()
+  const savedList = FEATURED_ANIMALS.filter((a) => favIds.includes(a.id))
 
   return (
-    <section className="min-h-screen bg-slate-50 pt-14">
-      {/* Page header */}
-      <div className="border-b border-slate-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-4 py-6 sm:flex-row sm:items-end sm:justify-between">
+    <div className="min-h-screen bg-[hsl(var(--bg))]">
+      {/* Header */}
+      <div className="border-b border-[hsl(var(--border))] bg-[hsl(var(--surface))]">
+        <div className="page-container">
+          <div className="flex flex-col gap-4 py-5 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="section-label mb-1">Dashboard comprador</p>
-              <h1 className="text-2xl font-black text-emerald-950 sm:text-3xl">
-                Pedidos, buscas e documentos
-              </h1>
-              <p className="mt-1.5 text-sm leading-6 text-slate-600">
-                Acompanhe negociações, status de frete, documentos fiscais e lotes salvos.
-              </p>
+              <p className="section-eyebrow mb-1">Dashboard comprador</p>
+              <h1 className="text-2xl font-black text-[hsl(var(--text))]">Pedidos, buscas e documentos</h1>
+              <p className="mt-1 text-sm text-[hsl(var(--muted-fg))]">Acompanhe negociações, status de frete e lotes salvos.</p>
             </div>
-            <Link to="/catalogo">
-              <Button>
-                <Search size={15} />
-                Nova busca
-              </Button>
-            </Link>
+            <Link to="/catalogo"><Button size="md"><Search size={15} /> Explorar catálogo</Button></Link>
           </div>
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 pb-16 pt-6 sm:px-6 lg:px-8">
-        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-          <div className="space-y-6">
-            {/* Timeline */}
-            <div className="border border-slate-200 bg-white">
+      <div className="page-container py-6">
+        <div className="grid gap-5 lg:grid-cols-[1fr_300px]">
+          {/* Main */}
+          <div className="space-y-5">
+            {/* Proposals */}
+            <div className="card">
               <div className="panel-header">
-                <h2 className="flex items-center gap-2 font-black text-emerald-950">
-                  <PackageSearch className="text-emerald-700" size={17} />
-                  Timeline da negociação
-                </h2>
-                {proposals.length > 0 && (
-                  <span className="border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-bold text-amber-700">
-                    {proposals.length} proposta{proposals.length > 1 ? 's' : ''} ativa{proposals.length > 1 ? 's' : ''}
-                  </span>
-                )}
+                <h2 className="font-bold text-[hsl(var(--text))]">Minhas propostas <span className="text-sm font-semibold text-[hsl(var(--muted-fg))]">({MOCK_PROPOSALS.length})</span></h2>
               </div>
-              <div className="grid divide-y divide-slate-100 sm:grid-cols-4 sm:divide-x sm:divide-y-0">
-                {timeline.map(([title, date, Icon, state], index) => (
-                  <div className="px-5 py-4" key={title}>
-                    <div className="mb-3 flex items-center gap-2">
-                      <span className={`flex h-7 w-7 items-center justify-center border text-xs font-black ${stateStyle[state]}`}>
-                        {index + 1}
-                      </span>
-                      <Icon
-                        className={state === 'done' ? 'text-emerald-600' : state === 'active' ? 'text-amber-600' : 'text-slate-300'}
-                        size={15}
-                      />
+              <div className="divide-y divide-[hsl(var(--border))]">
+                {MOCK_PROPOSALS.map((p) => (
+                  <div key={p.id} className="flex items-center justify-between gap-4 px-5 py-4">
+                    <div>
+                      <p className="font-semibold text-[hsl(var(--text))]">{p.animal}</p>
+                      <p className="mt-0.5 text-xs text-[hsl(var(--muted-fg))]">{p.date} · {formatCurrency(p.amount)}</p>
                     </div>
-                    <p className="font-bold text-emerald-950">{title}</p>
-                    <p className="mt-0.5 text-xs text-slate-500">{date}</p>
+                    <Badge variant={p.status === 'Aceita' ? 'active' : 'pending'}>{p.status}</Badge>
                   </div>
                 ))}
               </div>
+              {MOCK_PROPOSALS.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <PackageSearch size={28} className="mb-3 text-[hsl(var(--border))]" />
+                  <p className="font-bold text-[hsl(var(--text))]">Nenhuma proposta enviada</p>
+                  <p className="mt-1 text-xs text-[hsl(var(--muted-fg))]">Explore o catálogo e faça sua primeira oferta.</p>
+                </div>
+              )}
             </div>
 
-            {/* Orders table */}
-            <div className="border border-slate-200 bg-white">
+            {/* Timeline */}
+            <div className="card">
               <div className="panel-header">
-                <h2 className="font-black text-emerald-950">
-                  Pedidos recentes
-                  <span className="ml-2 text-sm font-semibold text-slate-400">({allOrders.length})</span>
-                </h2>
-                <Button size="sm" variant="outline">Ver todos</Button>
+                <h2 className="font-bold text-[hsl(var(--text))]">Progresso da negociação ativa</h2>
               </div>
-
-              <div className="hidden grid-cols-[auto_1fr_auto_auto] items-center gap-4 border-b border-slate-100 bg-slate-50 px-5 py-2.5 sm:grid">
-                <span className="prop-label">ID</span>
-                <span className="prop-label">Lote</span>
-                <span className="prop-label text-right">Valor</span>
-                <span />
-              </div>
-
-              <div className="divide-y divide-slate-100">
-                {allOrders.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <PackageSearch size={28} className="mb-3 text-slate-300" />
-                    <p className="font-semibold text-slate-500">Nenhum pedido ainda</p>
-                    <Link to="/catalogo" className="mt-3 text-sm font-bold text-emerald-700 hover:text-emerald-800">
-                      Explorar catálogo
-                    </Link>
+              <div className="px-5 py-5">
+                <div className="relative">
+                  <div className="absolute left-5 top-5 bottom-5 w-px bg-[hsl(var(--border))]" />
+                  <div className="space-y-5">
+                    {STEPS.map(([Icon, label, sub, state]) => (
+                      <div key={label} className="relative flex items-start gap-4">
+                        <span className={`relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 ${stateStyle[state]}`}>
+                          <Icon size={15} />
+                        </span>
+                        <div className="pt-1.5">
+                          <p className="font-semibold text-sm text-[hsl(var(--text))]">{label}</p>
+                          <p className="text-xs text-[hsl(var(--muted-fg))]">{sub}</p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ) : (
-                  allOrders.map((order) => (
-                    <div className="grid items-center gap-4 px-5 py-4 sm:grid-cols-[auto_1fr_auto_auto]" key={order.id}>
-                      <div className="hidden sm:block">
-                        <p className="font-mono text-sm font-bold text-slate-500">{order.id}</p>
-                      </div>
-                      <div>
-                        <p className="font-bold text-emerald-950">{order.animal}</p>
-                        <p className="mt-0.5 text-xs text-slate-500">
-                          {order.date} ·{' '}
-                          <span className={`font-bold ${order.status === 'Aguardando' ? 'text-amber-600' : 'text-emerald-600'}`}>
-                            {order.status}
-                          </span>
-                        </p>
-                      </div>
-                      <span className="hidden text-right sm:block">
-                        <p className="font-black text-slate-800">{order.amount}</p>
-                      </span>
-                      <Button size="sm" variant="outline">Abrir</Button>
+                </div>
+              </div>
+            </div>
+
+            {/* Documents mock */}
+            <div className="card">
+              <div className="panel-header">
+                <h2 className="font-bold text-[hsl(var(--text))]">Documentos</h2>
+              </div>
+              <div className="divide-y divide-[hsl(var(--border))]">
+                {[
+                  ['GTA — Guia de Trânsito Animal', 'Disponível', 'active'],
+                  ['Contrato de compra e venda', 'Pendente assinatura', 'pending'],
+                  ['Nota fiscal do produtor', 'Aguardando aceite', 'paused'],
+                ].map(([name, status, variant]) => (
+                  <div key={name} className="flex items-center justify-between px-5 py-3.5">
+                    <div className="flex items-center gap-3">
+                      <FileText size={15} className="text-brand-600 shrink-0" />
+                      <p className="text-sm font-medium text-[hsl(var(--text))]">{name}</p>
                     </div>
-                  ))
-                )}
+                    <Badge variant={variant}>{status}</Badge>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
 
           {/* Sidebar */}
           <aside className="space-y-4">
-            {/* Upcoming actions */}
-            <div className="border border-slate-200 bg-white">
+            {/* Saved animals */}
+            <div className="card">
               <div className="panel-header">
-                <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-600">
-                  <CalendarCheck2 size={14} className="text-emerald-700" />
-                  Próximas ações
-                </h2>
+                <h2 className="flex items-center gap-2 font-bold text-[hsl(var(--text))] text-sm"><Heart size={13} className="text-red-400" /> Lotes salvos ({savedList.length})</h2>
               </div>
-              <div className="divide-y divide-slate-100">
-                {proposals.length > 0 ? (
-                  <div className="flex items-start justify-between px-4 py-3.5">
-                    <div>
-                      <p className="text-sm font-bold text-amber-700">Aguardar aceite do vendedor</p>
-                      <p className="mt-0.5 text-xs text-slate-500">{proposals[0].animal} · Enviado agora</p>
+              {savedList.length > 0 ? (
+                <div className="divide-y divide-[hsl(var(--border))]">
+                  {savedList.map((a) => (
+                    <div key={a.id} className="flex items-center gap-3 px-4 py-3">
+                      <img src={a.image} alt={a.title} className="h-12 w-14 object-cover rounded-sm shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-[hsl(var(--text))] line-clamp-1">{a.title}</p>
+                        <p className="text-[11px] font-black text-brand-600">{formatCurrency(a.price)}</p>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Link to={`/anuncio/${a.id}`}><Button size="xs" variant="outline">Ver</Button></Link>
+                        <button onClick={() => toggle.mutate(a.id)} className="text-[hsl(var(--muted-fg))] hover:text-red-500 p-1">
+                          <Heart size={13} className="fill-red-500 text-red-500" />
+                        </button>
+                      </div>
                     </div>
-                    <Clock3 size={14} className="mt-0.5 text-amber-400" />
-                  </div>
-                ) : null}
-                {[
-                  ['Assinar contrato digital', 'Hoje até 18h', 'urgent'],
-                  ['Enviar comprovante do sinal', 'Após aceite', 'normal'],
-                  ['Confirmar janela de coleta', 'Até 06 mai', 'normal'],
-                ].map(([title, date, priority]) => (
-                  <div className="flex items-start justify-between px-4 py-3.5" key={title}>
-                    <div>
-                      <p className={`text-sm font-bold ${priority === 'urgent' ? 'text-red-700' : 'text-slate-800'}`}>
-                        {title}
-                      </p>
-                      <p className="mt-0.5 text-xs text-slate-500">{date}</p>
-                    </div>
-                    <Clock3 size={14} className={priority === 'urgent' ? 'mt-0.5 text-red-400' : 'mt-0.5 text-slate-300'} />
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-8 text-center px-4">
+                  <Heart size={24} className="mb-2 text-[hsl(var(--border))]" />
+                  <p className="text-xs font-bold text-[hsl(var(--text))]">Nenhum lote salvo</p>
+                  <p className="mt-1 text-[11px] text-[hsl(var(--muted-fg))]">Salve lotes do catálogo para ver aqui.</p>
+                  <Link to="/catalogo" className="mt-3"><Button size="xs">Explorar catálogo</Button></Link>
+                </div>
+              )}
             </div>
 
-            {/* Saved lots */}
-            <div className="border border-slate-200 bg-white">
+            {/* Quick links */}
+            <div className="card">
               <div className="panel-header">
-                <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-600">
-                  <MapPinned size={14} className="text-emerald-700" />
-                  Lotes salvos
-                </h2>
-                <span className="text-xs font-semibold text-slate-400">{savedAnimals.size} salvo{savedAnimals.size !== 1 ? 's' : ''}</span>
+                <h2 className="font-bold text-[hsl(var(--text))] text-sm">Ações rápidas</h2>
               </div>
-              <div className="divide-y divide-slate-100">
-                {savedList.length === 0 && (
-                  <div className="px-4 py-6 text-center">
-                    <p className="text-sm text-slate-500">Nenhum lote salvo ainda.</p>
-                    <Link to="/catalogo" className="mt-2 block text-xs font-bold text-emerald-700">
-                      Explorar catálogo
-                    </Link>
-                  </div>
-                )}
-                {savedList.slice(0, 4).map((animal) => (
-                  <div
-                    className="flex items-center gap-3 px-4 py-3.5 transition hover:bg-slate-50"
-                    key={animal.id}
-                  >
-                    <Link to={`/anuncio/${animal.id}`} className="flex flex-1 items-center gap-3 min-w-0">
-                      <img alt={animal.title} className="h-12 w-12 shrink-0 bg-slate-200 object-cover" src={animal.image} />
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-bold text-emerald-950">{animal.title}</p>
-                        <p className="mt-0.5 text-xs text-slate-500">{animal.location}</p>
-                      </div>
-                    </Link>
-                    <button
-                      onClick={() => toggleSave(animal.id)}
-                      className="shrink-0 text-xs font-bold text-slate-400 hover:text-red-500"
-                    >
-                      {savedAnimals.has(animal.id) ? '✕' : '♡'}
-                    </button>
-                  </div>
+              <div className="divide-y divide-[hsl(var(--border))]">
+                {[
+                  ['/catalogo',  <Search size={14} />,      'Buscar lotes'],
+                  ['/logistica', <Truck size={14} />,       'Cotar frete'],
+                  ['/catalogo',  <MapPinned size={14} />,   'Ver no mapa'],
+                  ['/catalogo',  <CalendarCheck2 size={14}/>, 'Agenda de retirada'],
+                ].map(([to, icon, label]) => (
+                  <Link key={label} to={to} className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-[hsl(var(--text-sub))] transition hover:bg-[hsl(var(--muted))] hover:text-brand-700">
+                    <span className="text-brand-600">{icon}</span> {label}
+                  </Link>
                 ))}
               </div>
             </div>
           </aside>
         </div>
       </div>
-      {showOnboarding && (
-        <OnboardingModal role="comprador" onClose={closeOnboarding} />
-      )}
-    </section>
+    </div>
   )
 }

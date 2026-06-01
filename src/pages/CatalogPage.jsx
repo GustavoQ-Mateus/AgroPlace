@@ -1,442 +1,247 @@
-import { useMemo, useState, lazy, Suspense } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { ArrowUpDown, Filter, GitCompareArrows, Map, List, MapPin, Search, X } from 'lucide-react'
-import AnimalCard from '../components/AnimalCard'
+import { ArrowRight, ChevronLeft, ChevronRight, Filter, MapPin, Search, ShieldCheck, SlidersHorizontal, X } from 'lucide-react'
 import Button from '../components/ui/Button'
-import { SkeletonList } from '../components/SkeletonCard'
-import CompareModal from '../components/CompareModal'
+import Badge from '../components/ui/Badge'
 import { CATEGORIES, FEATURED_ANIMALS } from '../data/mockAnimals'
-import { useApp } from '../context/AppContext'
+import { formatCurrency } from '../lib/utils'
+import { useToggleFavorite, useFavorites } from '../hooks/useFavorites'
+import { useAuthStore } from '../stores/authStore'
+import { Heart } from 'lucide-react'
 
-const MapaCatalogo = lazy(() => import('../components/MapaCatalogo'))
-
-const PRICE_OPTIONS = [
-  { label: 'Qualquer preço',   min: 0,        max: Infinity },
-  { label: 'Até R$ 50 mil',    min: 0,        max: 50000 },
-  { label: 'R$ 50k – R$ 150k', min: 50000,    max: 150000 },
-  { label: 'R$ 150k – R$ 300k',min: 150000,   max: 300000 },
-  { label: 'Acima de R$ 300k', min: 300000,   max: Infinity },
+const PRICE_OPTS = [
+  { label: 'Qualquer preço',    min: 0,      max: Infinity },
+  { label: 'Até R$ 50k',        min: 0,      max: 50000 },
+  { label: 'R$ 50k – R$ 150k',  min: 50000,  max: 150000 },
+  { label: 'R$ 150k – R$ 300k', min: 150000, max: 300000 },
+  { label: 'Acima de R$ 300k',  min: 300000, max: Infinity },
 ]
 
-const WEIGHT_OPTIONS = [
-  { label: 'Qualquer peso',   min: 0,   max: Infinity },
-  { label: 'Até 30 kg',       min: 0,   max: 30 },
-  { label: '30 – 100 kg',     min: 30,  max: 100 },
-  { label: '100 – 350 kg',    min: 100, max: 350 },
-  { label: 'Acima de 350 kg', min: 350, max: Infinity },
+const SORT_OPTS = [
+  { label: 'Mais recentes',         fn: (a, b) => a.daysListed - b.daysListed },
+  { label: 'Menor preço',           fn: (a, b) => a.price - b.price },
+  { label: 'Maior preço',           fn: (a, b) => b.price - a.price },
+  { label: 'Maior rastreabilidade', fn: (a, b) => b.traceability - a.traceability },
 ]
 
-const TRACE_OPTIONS = [
-  { label: 'Qualquer rastreab.',  min: 0  },
-  { label: 'Acima de 50%',       min: 50 },
-  { label: 'Acima de 75%',       min: 75 },
-  { label: 'Acima de 90%',       min: 90 },
-]
+const PER_PAGE = 12
 
-const SORT_OPTIONS = [
-  { label: 'Mais recentes',          fn: (a, b) => b.daysListed - a.daysListed },
-  { label: 'Menor preço',            fn: (a, b) => a.price - b.price },
-  { label: 'Maior preço',            fn: (a, b) => b.price - a.price },
-  { label: 'Maior rastreabilidade',  fn: (a, b) => b.traceability - a.traceability },
-]
+function AnimalRow({ animal }) {
+  const { data: favs = [] } = useFavorites()
+  const toggle = useToggleFavorite()
+  const user = useAuthStore((s) => s.user)
+  const isFav = favs.includes(animal.id)
+
+  return (
+    <div className="group relative card card-hover flex gap-4 p-4 transition">
+      <Link to={`/anuncio/${animal.id}`} className="absolute inset-0" aria-label={animal.title} />
+      <div className="relative h-[88px] w-[120px] shrink-0 overflow-hidden rounded-sm">
+        <img src={animal.image} alt={animal.title} className="h-full w-full object-cover transition group-hover:scale-105 duration-300" />
+      </div>
+      <div className="flex flex-1 flex-col justify-between min-w-0">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="font-bold text-[hsl(var(--text))] leading-snug line-clamp-1">{animal.title}</p>
+            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[hsl(var(--muted-fg))]">
+              <span className="flex items-center gap-1"><MapPin size={11} />{animal.location}</span>
+              <span>{animal.quantity} cabeças</span>
+              {animal.weight && <span>{animal.weight} kg</span>}
+            </div>
+          </div>
+          {user && (
+            <button
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggle.mutate(animal.id) }}
+              className="relative z-10 shrink-0 text-[hsl(var(--muted-fg))] transition hover:text-red-500"
+            >
+              <Heart size={16} className={isFav ? 'fill-red-500 text-red-500' : ''} />
+            </button>
+          )}
+        </div>
+        <div className="mt-3 flex items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-2">
+            {animal.tags?.slice(0, 2).map((tag) => (
+              <span key={tag} className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-brand-700 bg-brand-50 border border-brand-200 px-1.5 py-0.5 rounded-sm">
+                <ShieldCheck size={9} /> {tag}
+              </span>
+            ))}
+          </div>
+          <div className="text-right shrink-0">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-[hsl(var(--muted-fg))]">Preço total</p>
+            <p className="font-black text-brand-600">{formatCurrency(animal.price)}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function CatalogPage() {
-  const [params, setParams]     = useSearchParams()
-  const { listings }            = useApp()
-  const activeCategory          = params.get('cat')
-  const searchQuery             = params.get('q') || ''
+  const [params, setParams] = useSearchParams()
+  const cat = params.get('cat') || ''
+  const q   = params.get('q')  || ''
 
-  const [location, setLocation] = useState('')
+  const [search, setSearch]   = useState(q)
   const [priceIdx, setPriceIdx] = useState(0)
-  const [weightIdx, setWeightIdx]= useState(0)
-  const [traceIdx, setTraceIdx] = useState(0)
   const [sortIdx, setSortIdx]   = useState(0)
-  const [sortOpen, setSortOpen] = useState(false)
-  const [applied, setApplied]   = useState({ location: '', priceIdx: 0, weightIdx: 0, traceIdx: 0 })
-  const [localSearch, setLocalSearch] = useState(searchQuery)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [page, setPage] = useState(1)
-  const [isFiltering, setIsFiltering] = useState(false)
-  const [viewMode, setViewMode] = useState('list') // 'list' | 'map'
-  const [compareIds, setCompareIds] = useState(new Set())
-  const [showCompare, setShowCompare] = useState(false)
-  const PER_PAGE = 12
 
-  function toggleCompare(animal) {
-    setCompareIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(animal.id)) { next.delete(animal.id) }
-      else if (next.size < 3) { next.add(animal.id) }
-      return next
-    })
-  }
-  const compareAnimals = filtered.filter((a) => compareIds.has(a.id))
-
-  const ALL = useMemo(() => [...listings, ...FEATURED_ANIMALS], [listings])
+  const ALL = FEATURED_ANIMALS
 
   const filtered = useMemo(() => {
-    let result = ALL
-
-    const q = (params.get('q') || '').toLowerCase()
-    if (q) result = result.filter((a) =>
-      a.title.toLowerCase().includes(q) ||
-      a.breed?.toLowerCase().includes(q) ||
-      a.location?.toLowerCase().includes(q) ||
-      a.category?.toLowerCase().includes(q)
-    )
-
-    if (activeCategory) result = result.filter((a) => a.category === activeCategory)
-
-    if (applied.location) {
-      const loc = applied.location.toLowerCase()
-      result = result.filter((a) => a.location?.toLowerCase().includes(loc))
-    }
-
-    const price = PRICE_OPTIONS[applied.priceIdx]
-    result = result.filter((a) => a.price >= price.min && a.price <= price.max)
-
-    const weight = WEIGHT_OPTIONS[applied.weightIdx]
-    result = result.filter((a) => !a.weight || (a.weight >= weight.min && a.weight <= weight.max))
-
-    const trace = TRACE_OPTIONS[applied.traceIdx]
-    result = result.filter((a) => (a.traceability || 0) >= trace.min)
-
-    return [...result].sort(SORT_OPTIONS[sortIdx].fn)
-  }, [ALL, params, activeCategory, applied, sortIdx])
+    let r = [...ALL]
+    if (cat)  r = r.filter((a) => a.category === cat)
+    if (q)    r = r.filter((a) => a.title?.toLowerCase().includes(q.toLowerCase()) || a.location?.toLowerCase().includes(q.toLowerCase()) || a.breed?.toLowerCase().includes(q.toLowerCase()))
+    const p = PRICE_OPTS[priceIdx]
+    r = r.filter((a) => a.price >= p.min && a.price <= p.max)
+    return [...r].sort(SORT_OPTS[sortIdx].fn)
+  }, [ALL, cat, q, priceIdx, sortIdx])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE))
-  const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE)
-
-  function clearCategory() {
-    const next = new URLSearchParams(params)
-    next.delete('cat')
-    setParams(next)
-  }
-
-  function clearSearch() {
-    const next = new URLSearchParams(params)
-    next.delete('q')
-    setParams(next)
-    setLocalSearch('')
-  }
+  const paginated  = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE)
 
   function handleSearch(e) {
     e.preventDefault()
     const next = new URLSearchParams(params)
-    if (localSearch.trim()) next.set('q', localSearch.trim())
-    else next.delete('q')
+    if (search.trim()) next.set('q', search.trim()); else next.delete('q')
     setParams(next)
-  }
-
-  function applyFilters() {
-    setIsFiltering(true)
-    setTimeout(() => {
-      setApplied({ location, priceIdx, weightIdx, traceIdx })
-      setPage(1)
-      setIsFiltering(false)
-    }, 350)
-  }
-
-  function clearFilters() {
-    setLocation('')
-    setPriceIdx(0)
-    setWeightIdx(0)
-    setTraceIdx(0)
-    setApplied({ location: '', priceIdx: 0, weightIdx: 0, traceIdx: 0 })
     setPage(1)
-    clearSearch()
-    clearCategory()
   }
 
-  const hasActiveFilters = applied.location || applied.priceIdx || applied.weightIdx || applied.traceIdx || activeCategory || searchQuery
+  function setCat(id) {
+    const next = new URLSearchParams(params)
+    if (id) next.set('cat', id); else next.delete('cat')
+    setParams(next)
+    setPage(1)
+  }
 
   return (
-    <section className="min-h-screen bg-slate-50 pt-14">
-      {/* Page header strip */}
-      <div className="border-b border-slate-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-4 py-6 lg:flex-row lg:items-end lg:justify-between">
+    <div className="min-h-screen bg-[hsl(var(--bg))]">
+      {/* Top bar */}
+      <div className="border-b border-[hsl(var(--border))] bg-[hsl(var(--surface))]">
+        <div className="page-container py-5">
+          <p className="section-eyebrow mb-1">Catálogo</p>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="section-label mb-1">Catálogo de busca</p>
-              <h1 className="text-2xl font-black text-emerald-950 sm:text-3xl">
-                Marketplace com filtros de compra
+              <h1 className="text-2xl font-black text-[hsl(var(--text))]">
+                {cat ? CATEGORIES.find((c) => c.id === cat)?.label ?? 'Espécie' : 'Todos os lotes'}
+                <span className="ml-2 text-sm font-semibold text-[hsl(var(--muted-fg))]">({filtered.length})</span>
               </h1>
-              <p className="mt-1.5 text-sm leading-6 text-slate-600">
-                Busque por espécie, raça, estado, rastreabilidade, preço e janela logística.
-              </p>
             </div>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              {/* View mode toggle */}
-              <div className="flex border border-slate-200">
-                <button
-                  onClick={() => setViewMode('list')}
-                  className={`flex h-10 items-center gap-2 px-3 text-sm font-semibold transition ${viewMode === 'list' ? 'bg-emerald-600 text-white' : 'text-slate-500 hover:bg-slate-50'}`}
-                >
-                  <List size={14} /> Lista
-                </button>
-                <button
-                  onClick={() => setViewMode('map')}
-                  className={`flex h-10 items-center gap-2 px-3 text-sm font-semibold transition ${viewMode === 'map' ? 'bg-emerald-600 text-white' : 'text-slate-500 hover:bg-slate-50'}`}
-                >
-                  <Map size={14} /> Mapa
-                </button>
-              </div>
-              <form onSubmit={handleSearch} className="relative block w-full sm:min-w-72">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+            <form onSubmit={handleSearch} className="flex gap-2">
+              <label className="relative flex-1 sm:w-64">
+                <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[hsl(var(--muted-fg))]" />
                 <input
-                  className="h-10 w-full border border-slate-200 bg-slate-50 pl-9 pr-9 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/15"
-                  placeholder="Nelore, Santa Inês, Chapecó..."
-                  value={localSearch}
-                  onChange={(e) => setLocalSearch(e.target.value)}
+                  type="search" value={search} onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Raça, espécie, cidade…"
+                  className="field-input pl-9"
                 />
-                {localSearch && (
-                  <button type="button" onClick={() => { setLocalSearch(''); clearSearch() }} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
-                    <X size={13} />
-                  </button>
-                )}
-              </form>
-
-              <div className="relative">
-                <Button
-                  className="w-full sm:w-auto"
-                  variant="outline"
-                  onClick={() => setSortOpen((v) => !v)}
-                >
-                  <ArrowUpDown size={14} />
-                  {SORT_OPTIONS[sortIdx].label}
-                </Button>
-                {sortOpen && (
-                  <div className="absolute right-0 top-full z-20 mt-1 min-w-52 border border-slate-200 bg-white py-1 shadow-lg">
-                    {SORT_OPTIONS.map((opt, i) => (
-                      <button
-                        key={opt.label}
-                        onClick={() => { setSortIdx(i); setSortOpen(false) }}
-                        className={`block w-full px-4 py-2.5 text-left text-sm font-medium transition hover:bg-slate-50 ${i === sortIdx ? 'text-emerald-700 font-bold' : 'text-slate-600'}`}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
+              </label>
+              <Button type="submit" size="md"><Search size={14} /></Button>
+            </form>
           </div>
 
-          {/* Active filters chips */}
-          {(searchQuery || activeCategory) && (
-            <div className="flex flex-wrap items-center gap-2 pb-3">
-              {searchQuery && (
-                <span className="flex items-center gap-1.5 border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
-                  Busca: {searchQuery}
-                  <button onClick={clearSearch}><X size={11} /></button>
-                </span>
-              )}
-              {activeCategory && (
-                <span className="flex items-center gap-1.5 border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
-                  {CATEGORIES.find((c) => c.id === activeCategory)?.label || activeCategory}
-                  <button onClick={clearCategory}><X size={11} /></button>
-                </span>
-              )}
-              <button onClick={clearFilters} className="text-xs font-bold text-slate-400 hover:text-slate-700">
-                Limpar tudo
-              </button>
-            </div>
-          )}
-
-          {/* Category filter tabs */}
-          <div className="flex gap-0 overflow-x-auto border-t border-slate-100">
-            <button
-              className={`shrink-0 border-b-2 px-4 py-2.5 text-sm font-bold transition ${!activeCategory ? 'border-emerald-600 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
-              onClick={clearCategory}
-            >
-              Todas espécies
+          {/* Category pills */}
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button onClick={() => setCat('')}
+              className={`rounded-sm px-3 py-1.5 text-xs font-semibold transition ${!cat ? 'bg-brand-600 text-white' : 'border border-[hsl(var(--border))] text-[hsl(var(--muted-fg))] hover:border-brand-400 hover:text-brand-700'}`}>
+              Todos
             </button>
-            {CATEGORIES.map((category) => (
-              <Link
-                className={`shrink-0 border-b-2 px-4 py-2.5 text-sm font-bold transition ${activeCategory === category.id ? 'border-emerald-600 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
-                key={category.id}
-                to={`/catalogo?cat=${category.id}`}
-              >
-                {category.label}
-              </Link>
+            {CATEGORIES.map((c) => (
+              <button key={c.id} onClick={() => setCat(c.id)}
+                className={`rounded-sm px-3 py-1.5 text-xs font-semibold transition ${cat === c.id ? 'bg-brand-600 text-white' : 'border border-[hsl(var(--border))] text-[hsl(var(--muted-fg))] hover:border-brand-400 hover:text-brand-700'}`}>
+                {c.label}
+              </button>
             ))}
           </div>
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 pb-16 pt-6 sm:px-6 lg:px-8">
-        <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
+      <div className="page-container py-6">
+        <div className="flex gap-6">
           {/* Sidebar filters */}
-          <aside className="h-fit border border-slate-200 bg-white">
-            <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3">
-              <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-600">
-                <Filter size={13} />
-                Filtros
-              </h2>
-              {hasActiveFilters && (
-                <button
-                  className="flex items-center gap-1 text-xs font-bold text-slate-400 hover:text-slate-700"
-                  onClick={clearFilters}
-                >
-                  <X size={12} />
-                  Limpar
-                </button>
-              )}
+          <aside className="hidden w-56 shrink-0 space-y-4 lg:block">
+            <div className="card p-4">
+              <p className="field-label mb-3 flex items-center gap-1.5"><SlidersHorizontal size={12} /> Filtros</p>
+
+              <div className="space-y-1 mb-4">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[hsl(var(--muted-fg))] mb-2">Preço</p>
+                {PRICE_OPTS.map((opt, i) => (
+                  <button key={i} onClick={() => { setPriceIdx(i); setPage(1) }}
+                    className={`w-full rounded-sm px-2.5 py-1.5 text-left text-xs font-medium transition ${i === priceIdx ? 'bg-brand-600 text-white' : 'text-[hsl(var(--text-sub))] hover:bg-[hsl(var(--muted))]'}`}>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            <div className="divide-y divide-slate-100">
-              <label className="grid gap-2 px-4 py-4">
-                <span className="prop-label">Localização</span>
-                <span className="relative">
-                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={13} />
-                  <input
-                    className="h-9 w-full border border-slate-200 pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-emerald-500/15"
-                    placeholder="Estado ou cidade"
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                  />
-                </span>
-              </label>
-
-              <label className="grid gap-2 px-4 py-4">
-                <span className="prop-label">Faixa de preço</span>
-                <select
-                  className="h-9 border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/15"
-                  value={priceIdx}
-                  onChange={(e) => setPriceIdx(+e.target.value)}
-                >
-                  {PRICE_OPTIONS.map((opt, i) => <option key={opt.label} value={i}>{opt.label}</option>)}
-                </select>
-              </label>
-
-              <label className="grid gap-2 px-4 py-4">
-                <span className="prop-label">Peso médio</span>
-                <select
-                  className="h-9 border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/15"
-                  value={weightIdx}
-                  onChange={(e) => setWeightIdx(+e.target.value)}
-                >
-                  {WEIGHT_OPTIONS.map((opt, i) => <option key={opt.label} value={i}>{opt.label}</option>)}
-                </select>
-              </label>
-
-              <label className="grid gap-2 px-4 py-4">
-                <span className="prop-label">Rastreabilidade mínima</span>
-                <select
-                  className="h-9 border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/15"
-                  value={traceIdx}
-                  onChange={(e) => setTraceIdx(+e.target.value)}
-                >
-                  {TRACE_OPTIONS.map((opt, i) => <option key={opt.label} value={i}>{opt.label}</option>)}
-                </select>
-              </label>
-            </div>
-
-            <div className="border-t border-slate-200 p-4">
-              <Button className="w-full" onClick={applyFilters}>Aplicar filtros</Button>
+            <div className="card p-4">
+              <p className="field-label mb-3 flex items-center gap-1.5"><Filter size={12} /> Ordenar</p>
+              <div className="space-y-1">
+                {SORT_OPTS.map((opt, i) => (
+                  <button key={i} onClick={() => { setSortIdx(i); setPage(1) }}
+                    className={`w-full rounded-sm px-2.5 py-1.5 text-left text-xs font-medium transition ${i === sortIdx ? 'bg-brand-600 text-white' : 'text-[hsl(var(--text-sub))] hover:bg-[hsl(var(--muted))]'}`}>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </aside>
 
-          {/* Results */}
-          <div>
-            {/* Result count bar */}
-            <div className="mb-4 flex items-center justify-between border border-slate-200 bg-white px-4 py-3">
-              <p className="text-sm font-semibold text-slate-700">
-                {filtered.length} lote{filtered.length !== 1 ? 's' : ''} encontrado{filtered.length !== 1 ? 's' : ''}
-              </p>
-              <p className="text-xs font-medium text-slate-400">Atualizado agora</p>
+          {/* Main content */}
+          <div className="flex-1 min-w-0">
+            {/* Mobile filter bar */}
+            <div className="mb-4 flex items-center gap-2 lg:hidden">
+              <select value={priceIdx} onChange={(e) => { setPriceIdx(+e.target.value); setPage(1) }}
+                className="flex-1 field-input text-xs">
+                {PRICE_OPTS.map((o, i) => <option key={i} value={i}>{o.label}</option>)}
+              </select>
+              <select value={sortIdx} onChange={(e) => { setSortIdx(+e.target.value); setPage(1) }}
+                className="flex-1 field-input text-xs">
+                {SORT_OPTS.map((o, i) => <option key={i} value={i}>{o.label}</option>)}
+              </select>
             </div>
 
-            {/* Compare bar */}
-            {compareIds.size > 0 && (
-              <div className="mb-4 flex items-center justify-between border border-emerald-200 bg-emerald-50 px-4 py-3">
-                <p className="flex items-center gap-2 text-sm font-bold text-emerald-800">
-                  <GitCompareArrows size={15} />
-                  {compareIds.size} lote{compareIds.size > 1 ? 's' : ''} selecionado{compareIds.size > 1 ? 's' : ''} para comparação
-                </p>
-                <div className="flex gap-2">
-                  <button onClick={() => setCompareIds(new Set())} className="text-xs font-semibold text-emerald-600 hover:text-emerald-800">
-                    Limpar
-                  </button>
-                  <Button size="sm" onClick={() => setShowCompare(true)} disabled={compareIds.size < 2}>
-                    Comparar agora
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {viewMode === 'map' ? (
-              <Suspense fallback={<div className="flex h-96 items-center justify-center border border-slate-200 bg-white text-sm text-slate-400">Carregando mapa…</div>}>
-                <MapaCatalogo animals={filtered} />
-              </Suspense>
-            ) : isFiltering ? (
-              <div className="border border-slate-200 bg-white">
-                <div className="hidden grid-cols-[56px_1fr_auto_auto_auto_auto] items-center gap-4 border-b border-slate-200 bg-slate-50 px-5 py-2.5 sm:grid">
-                  <span /><span className="prop-label">Lote / Produtor</span>
-                  <span className="prop-label text-right">Cabeças</span>
-                  <span className="prop-label text-right">Rastreab.</span>
-                  <span className="prop-label text-right">Preço total</span>
-                  <span />
-                </div>
-                <SkeletonList count={8} />
-              </div>
-            ) : filtered.length === 0 ? (
-              <div className="flex flex-col items-center justify-center border border-slate-200 bg-white py-16 text-center">
-                <Search size={32} className="mb-4 text-slate-300" />
-                <p className="font-black text-slate-700">Nenhum lote encontrado</p>
-                <p className="mt-1 text-sm text-slate-500">Tente ajustar os filtros ou ampliar a busca.</p>
-                <button onClick={clearFilters} className="mt-4 text-sm font-bold text-emerald-700 hover:text-emerald-800">
-                  Limpar todos os filtros
+            {/* Results */}
+            {paginated.length === 0 ? (
+              <div className="card flex flex-col items-center justify-center py-16 text-center">
+                <p className="font-black text-[hsl(var(--text))]">Nenhum lote encontrado</p>
+                <p className="mt-1 text-sm text-[hsl(var(--muted-fg))]">Tente outros filtros ou categorias.</p>
+                <button onClick={() => { setPriceIdx(0); setPage(1) }} className="mt-4 text-sm font-semibold text-brand-600 hover:underline">
+                  Limpar filtros
                 </button>
               </div>
             ) : (
-              <div className="border border-slate-200 bg-white">
-                <div className="hidden grid-cols-[56px_1fr_auto_auto_auto_auto] items-center gap-4 border-b border-slate-200 bg-slate-50 px-5 py-2.5 sm:grid">
-                  <span />
-                  <span className="prop-label">Lote / Produtor</span>
-                  <span className="prop-label text-right">Cabeças</span>
-                  <span className="prop-label text-right">Rastreab.</span>
-                  <span className="prop-label text-right">Preço total</span>
-                  <span />
+              <>
+                {/* 3-column card grid or list (horizontal cards) */}
+                <div className="space-y-3">
+                  {paginated.map((a) => <AnimalRow key={a.id} animal={a} />)}
                 </div>
-                <div>
-                  {paginated.map((animal, index) => (
-                    <AnimalCard
-                      animal={animal}
-                      index={index}
-                      key={animal.id}
-                      onCompare={toggleCompare}
-                      compareSelected={compareIds.has(animal.id)}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
 
-            {totalPages > 1 && (
-              <div className="flex items-center justify-center gap-3 mt-8">
-                <button
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                  className="px-4 py-2 rounded-lg border border-zinc-200 text-zinc-600 disabled:opacity-40 hover:bg-zinc-50 transition-colors"
-                >
-                  ← Anterior
-                </button>
-                <span className="text-sm text-zinc-500">Página {page} de {totalPages}</span>
-                <button
-                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages}
-                  className="px-4 py-2 rounded-lg border border-zinc-200 text-zinc-600 disabled:opacity-40 hover:bg-zinc-50 transition-colors"
-                >
-                  Próximo →
-                </button>
-              </div>
+                {/* Numbered pagination */}
+                {totalPages > 1 && (
+                  <div className="mt-8 flex items-center justify-center gap-1">
+                    <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
+                      className="flex h-9 w-9 items-center justify-center border border-[hsl(var(--border))] text-[hsl(var(--text-sub))] transition hover:bg-[hsl(var(--muted))] disabled:opacity-30 rounded-sm">
+                      <ChevronLeft size={15} />
+                    </button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                      <button key={p} onClick={() => setPage(p)}
+                        className={`h-9 min-w-[36px] px-2 text-sm font-semibold transition rounded-sm ${p === page ? 'bg-brand-600 text-white' : 'border border-[hsl(var(--border))] text-[hsl(var(--text-sub))] hover:bg-[hsl(var(--muted))]'}`}>
+                        {p}
+                      </button>
+                    ))}
+                    <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+                      className="flex h-9 w-9 items-center justify-center border border-[hsl(var(--border))] text-[hsl(var(--text-sub))] transition hover:bg-[hsl(var(--muted))] disabled:opacity-30 rounded-sm">
+                      <ChevronRight size={15} />
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
       </div>
-      {showCompare && compareAnimals.length >= 2 && (
-        <CompareModal animals={compareAnimals} onClose={() => setShowCompare(false)} />
-      )}
-    </section>
+    </div>
   )
 }

@@ -1,37 +1,38 @@
 import { useState } from 'react'
 import { ArrowRight, BadgeCheck, MapPinned, Route, ShieldCheck, Truck } from 'lucide-react'
 import Button from '../components/ui/Button'
-import { useApp } from '../context/AppContext'
+import { FieldGroup } from '../components/ui/Input'
+import { useUiStore } from '../stores/uiStore'
 
 const CARRIERS = [
-  { id: 'c1', name: 'Boiadeiro Express', price: 8400, time: '2 dias', score: '98%', detail: 'Carreta boiadeira · 42 cabeças' },
-  { id: 'c2', name: 'AgroRota Sul',       price: 9150, time: '3 dias', score: '94%', detail: 'Baú climatizado para aves e suínos' },
-  { id: 'c3', name: 'TransCampo Prime',   price: 10200, time: '1 dia', score: '97%', detail: 'Motorista habilitado em bem-estar animal' },
+  { id: 'c1', name: 'Boiadeiro Express', price: 8400,  time: '2 dias', score: '98%', detail: 'Carreta boiadeira · 42 cabeças' },
+  { id: 'c2', name: 'AgroRota Sul',      price: 9150,  time: '3 dias', score: '94%', detail: 'Baú climatizado para aves e suínos' },
+  { id: 'c3', name: 'TransCampo Prime',  price: 10200, time: '1 dia',  score: '97%', detail: 'Motorista habilitado em bem-estar animal' },
 ]
 
-const routeDetails = [
-  ['Distância', '523 km'],
-  ['Pedágios', 'R$ 620'],
-  ['Paradas manejo', '2 pontos'],
-  ['Risco climático', 'Baixo'],
+const ROUTE_DETAILS = [
+  ['Distância',     '523 km'],
+  ['Pedágios',      'R$ 620'],
+  ['Paradas manejo','2 pontos'],
+  ['Risco climático','Baixo'],
 ]
 
-const SPECIES_OPTIONS = ['Bovinos', 'Equinos', 'Suínos', 'Aves', 'Ovinos', 'Caprinos']
+const SPECIES = ['Bovinos', 'Equinos', 'Suínos', 'Aves', 'Ovinos', 'Caprinos']
 
 export default function LogisticsPage() {
-  const { addToast } = useApp()
-  const [form, setForm] = useState({ origin: 'Uberaba, MG', dest: 'Campinas, SP', species: 'Bovinos', qty: '40', window: '7 a 12 de maio' })
-  const [selectedCarrier, setSelectedCarrier] = useState(null)
+  const addToast = useUiStore((s) => s.addToast)
+  const [form, setForm] = useState({ origin: 'Uberaba, MG', dest: 'Campinas, SP', species: 'Bovinos', qty: '40', window: '7 a 12 de junho' })
+  const [selected, setSelected] = useState(null)
   const [loading, setLoading] = useState(false)
-  const [calculated, setCalculated] = useState(true)
+  const [calculated, setCalculated] = useState(false)
 
-  function field(key, value) { setForm((f) => ({ ...f, [key]: value })) }
+  function field(k, v) { setForm((f) => ({ ...f, [k]: v })) }
 
-  async function handleCalculate(e) {
+  async function handleCalc(e) {
     e.preventDefault()
     if (!form.origin || !form.dest) { addToast('Informe origem e destino.', 'error'); return }
     setLoading(true)
-    setSelectedCarrier(null)
+    setSelected(null)
     await new Promise((r) => setTimeout(r, 800))
     setCalculated(true)
     setLoading(false)
@@ -39,225 +40,179 @@ export default function LogisticsPage() {
   }
 
   function handleSelect(carrier) {
-    setSelectedCarrier(carrier.id)
+    setSelected(carrier.id)
     addToast(`${carrier.name} selecionada. Cotação vinculada à proposta.`)
   }
 
   return (
-    <section className="min-h-screen bg-slate-50 pt-14">
-      {/* Page header */}
-      <div className="border-b border-slate-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid gap-5 py-6 lg:grid-cols-[1fr_280px] lg:items-end">
+    <div className="min-h-screen bg-[hsl(var(--bg))]">
+      {/* Header */}
+      <div className="border-b border-[hsl(var(--border))] bg-[hsl(var(--surface))]">
+        <div className="page-container">
+          <div className="grid gap-5 py-5 lg:grid-cols-[1fr_240px] lg:items-end">
             <div>
-              <p className="section-label mb-1">Logística e frete</p>
-              <h1 className="text-2xl font-black text-emerald-950 sm:text-3xl">
-                Match de rotas para transporte animal
-              </h1>
-              <p className="mt-1.5 text-sm leading-6 text-slate-600">
-                Simule origem, destino, quantidade, espécie e janela de coleta para comparar transportadoras.
-              </p>
+              <p className="section-eyebrow mb-1">Logística e frete</p>
+              <h1 className="text-2xl font-black text-[hsl(var(--text))]">Match de rotas para transporte animal</h1>
+              <p className="mt-1 text-sm text-[hsl(var(--muted-fg))]">Compare transportadoras por origem, destino, espécie e janela de coleta.</p>
             </div>
-            <div className="border border-slate-200 bg-slate-50 px-4 py-4">
-              <p className="prop-label mb-1">SLA médio de cotação</p>
-              <p className="text-3xl font-black text-emerald-950">18 min</p>
-              <p className="mt-0.5 text-sm text-slate-500">com transportadoras verificadas</p>
+            <div className="card px-4 py-4">
+              <p className="field-label mb-1">SLA médio de cotação</p>
+              <p className="text-3xl font-black text-brand-600">18 min</p>
+              <p className="mt-0.5 text-xs text-[hsl(var(--muted-fg))]">com transportadoras verificadas</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 pb-16 pt-6 sm:px-6 lg:px-8">
-        <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
+      <div className="page-container py-6">
+        <div className="grid gap-5 lg:grid-cols-[256px_1fr]">
           {/* Route form */}
-          <aside className="h-fit border border-slate-200 bg-white">
+          <aside className="h-fit card">
             <div className="panel-header">
-              <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-600">
-                <Route size={14} className="text-emerald-700" />
-                Simular rota
-              </h2>
+              <h2 className="flex items-center gap-2 field-label"><Route size={13} className="text-brand-600" /> Simular rota</h2>
             </div>
-            <form onSubmit={handleCalculate}>
-              <div className="divide-y divide-slate-100">
-                <label className="grid gap-1.5 px-4 py-3.5">
-                  <span className="prop-label">Origem</span>
-                  <input
-                    className="h-9 border border-slate-200 px-3 text-sm outline-none focus:ring-2 focus:ring-emerald-500/15"
-                    value={form.origin}
-                    onChange={(e) => field('origin', e.target.value)}
-                    placeholder="Cidade, UF"
-                  />
-                </label>
-                <label className="grid gap-1.5 px-4 py-3.5">
-                  <span className="prop-label">Destino</span>
-                  <input
-                    className="h-9 border border-slate-200 px-3 text-sm outline-none focus:ring-2 focus:ring-emerald-500/15"
-                    value={form.dest}
-                    onChange={(e) => field('dest', e.target.value)}
-                    placeholder="Cidade, UF"
-                  />
-                </label>
-                <label className="grid gap-1.5 px-4 py-3.5">
-                  <span className="prop-label">Espécie</span>
-                  <select
-                    className="h-9 border border-slate-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-emerald-500/15"
-                    value={form.species}
-                    onChange={(e) => field('species', e.target.value)}
-                  >
-                    {SPECIES_OPTIONS.map((s) => <option key={s}>{s}</option>)}
-                  </select>
-                </label>
-                <label className="grid gap-1.5 px-4 py-3.5">
-                  <span className="prop-label">Quantidade (cabeças)</span>
-                  <input
-                    type="number" min="1"
-                    className="h-9 border border-slate-200 px-3 text-sm outline-none focus:ring-2 focus:ring-emerald-500/15"
-                    value={form.qty}
-                    onChange={(e) => field('qty', e.target.value)}
-                  />
-                </label>
-                <label className="grid gap-1.5 px-4 py-3.5">
-                  <span className="prop-label">Janela de coleta</span>
-                  <input
-                    className="h-9 border border-slate-200 px-3 text-sm outline-none focus:ring-2 focus:ring-emerald-500/15"
-                    value={form.window}
-                    onChange={(e) => field('window', e.target.value)}
-                    placeholder="ex.: 7 a 12 de maio"
-                  />
-                </label>
+            <form onSubmit={handleCalc}>
+              <div className="divide-y divide-[hsl(var(--border))]">
+                {[
+                  ['origin', 'Origem', 'text', 'Cidade, UF'],
+                  ['dest',   'Destino','text', 'Cidade, UF'],
+                ].map(([key, label, type, ph]) => (
+                  <div key={key} className="px-4 py-3.5">
+                    <FieldGroup label={label}>
+                      <input type={type} className="field-input h-9" placeholder={ph} value={form[key]} onChange={(e) => field(key, e.target.value)} />
+                    </FieldGroup>
+                  </div>
+                ))}
+                <div className="px-4 py-3.5">
+                  <FieldGroup label="Espécie">
+                    <select className="field-input h-9 bg-[hsl(var(--surface))]" value={form.species} onChange={(e) => field('species', e.target.value)}>
+                      {SPECIES.map((s) => <option key={s}>{s}</option>)}
+                    </select>
+                  </FieldGroup>
+                </div>
+                <div className="px-4 py-3.5">
+                  <FieldGroup label="Quantidade (cabeças)">
+                    <input type="number" min="1" className="field-input h-9" value={form.qty} onChange={(e) => field('qty', e.target.value)} />
+                  </FieldGroup>
+                </div>
+                <div className="px-4 py-3.5">
+                  <FieldGroup label="Janela de coleta">
+                    <input className="field-input h-9" placeholder="ex.: 7 a 12 de junho" value={form.window} onChange={(e) => field('window', e.target.value)} />
+                  </FieldGroup>
+                </div>
               </div>
-              <div className="border-t border-slate-200 p-4">
+              <div className="border-t border-[hsl(var(--border))] p-4">
                 <Button type="submit" className="w-full" loading={loading}>
-                  Recalcular frete
-                  {!loading && <ArrowRight size={14} />}
+                  {!loading && <><Route size={14} /> Calcular rota</>}
                 </Button>
               </div>
             </form>
           </aside>
 
-          <div className="space-y-6">
+          <div className="space-y-5">
             {/* Route map */}
-            <div className="border border-slate-200 bg-white">
-              <div className="panel-header">
-                <h2 className="flex items-center gap-2 font-black text-emerald-950">
-                  <MapPinned className="text-emerald-700" size={17} />
-                  Rota sugerida
-                </h2>
-                {calculated && (
-                  <span className="text-xs font-bold text-emerald-700 border border-emerald-200 bg-emerald-50 px-2 py-0.5">
+            {!calculated ? (
+              <div className="card flex flex-col items-center justify-center py-16 text-center">
+                <Route size={32} className="mb-3 text-[hsl(var(--border))]" />
+                <p className="font-bold text-[hsl(var(--text))]">Simule sua rota</p>
+                <p className="mt-1 text-sm text-[hsl(var(--muted-fg))]">Preencha origem, destino e clique em "Calcular rota".</p>
+              </div>
+            ) : (
+              <div className="card overflow-hidden">
+                <div className="panel-header">
+                  <h2 className="flex items-center gap-2 font-bold text-[hsl(var(--text))]">
+                    <MapPinned className="text-brand-600" size={16} /> Rota sugerida
+                  </h2>
+                  <span className="text-xs font-bold text-brand-700 border border-brand-200 bg-brand-50 px-2 py-0.5 rounded-sm">
                     {form.origin} → {form.dest}
                   </span>
-                )}
-              </div>
-              <div className="grid gap-0 sm:grid-cols-[1fr_220px] sm:divide-x divide-slate-200">
-                <div className="relative min-h-56 bg-[linear-gradient(135deg,#dcfce7_25%,#f8fafc_25%,#f8fafc_50%,#dcfce7_50%,#dcfce7_75%,#f8fafc_75%)] bg-[length:28px_28px]">
-                  <div className="absolute left-8 top-8 border border-slate-200 bg-white px-4 py-3 shadow-sm">
-                    <p className="prop-label mb-0.5">Origem</p>
-                    <p className="font-black text-emerald-950">{form.origin || '—'}</p>
-                  </div>
-                  <div className="absolute bottom-8 right-8 border border-slate-200 bg-white px-4 py-3 shadow-sm">
-                    <p className="prop-label mb-0.5">Destino</p>
-                    <p className="font-black text-emerald-950">{form.dest || '—'}</p>
-                  </div>
-                  <div className="absolute left-[18%] top-1/2 h-1 w-[62%] -translate-y-1/2 rotate-[-8deg] bg-emerald-600" />
                 </div>
-                <div className="divide-y divide-slate-100">
-                  {routeDetails.map(([label, value]) => (
-                    <div className="px-5 py-4" key={label}>
-                      <p className="prop-label mb-1">{label}</p>
-                      <p className="text-sm font-black text-slate-800">{value}</p>
+                <div className="grid sm:grid-cols-[1fr_200px] sm:divide-x divide-[hsl(var(--border))]">
+                  <div className="relative min-h-48 bg-brand-50"
+                    style={{ backgroundImage: 'repeating-linear-gradient(45deg,hsl(var(--border)) 0,hsl(var(--border)) 1px,transparent 0,transparent 50%)', backgroundSize: '20px 20px' }}>
+                    <div className="absolute left-6 top-6 card px-3 py-2 shadow-sm">
+                      <p className="field-label mb-0.5">Origem</p>
+                      <p className="text-sm font-black text-[hsl(var(--text))]">{form.origin}</p>
                     </div>
-                  ))}
+                    <div className="absolute bottom-6 right-6 card px-3 py-2 shadow-sm">
+                      <p className="field-label mb-0.5">Destino</p>
+                      <p className="text-sm font-black text-[hsl(var(--text))]">{form.dest}</p>
+                    </div>
+                    <div className="absolute left-[18%] top-1/2 h-1 w-[62%] -translate-y-1/2 -rotate-6 bg-brand-600 rounded-full" />
+                  </div>
+                  <div className="divide-y divide-[hsl(var(--border))]">
+                    {ROUTE_DETAILS.map(([label, value]) => (
+                      <div key={label} className="px-4 py-3.5">
+                        <p className="field-label mb-0.5">{label}</p>
+                        <p className="text-sm font-bold text-[hsl(var(--text))]">{value}</p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
-            {/* Carrier comparison table */}
-            <div className="border border-slate-200 bg-white">
+            {/* Carriers */}
+            <div className="card">
               <div className="panel-header">
-                <h2 className="flex items-center gap-2 font-black text-emerald-950">
-                  <Truck className="text-emerald-700" size={16} />
-                  Transportadoras disponíveis
+                <h2 className="flex items-center gap-2 font-bold text-[hsl(var(--text))]">
+                  <Truck className="text-brand-600" size={15} /> Transportadoras disponíveis
                 </h2>
-                <span className="text-xs font-semibold text-slate-400">{CARRIERS.length} opções</span>
+                <span className="text-xs font-semibold text-[hsl(var(--muted-fg))]">{CARRIERS.length} opções</span>
               </div>
 
-              <div className="hidden grid-cols-[auto_1fr_auto_auto_auto_auto] items-center gap-4 border-b border-slate-100 bg-slate-50 px-5 py-2.5 sm:grid">
+              <div className="hidden grid-cols-[auto_1fr_auto_auto_auto_auto] items-center gap-4 border-b border-[hsl(var(--border))] bg-[hsl(var(--muted))] px-5 py-2 sm:grid">
                 <span />
-                <span className="prop-label">Transportadora</span>
-                <span className="prop-label text-right">Score</span>
-                <span className="prop-label text-right">Prazo</span>
-                <span className="prop-label text-right">Cotação</span>
+                <span className="field-label">Transportadora</span>
+                <span className="field-label text-right">Score</span>
+                <span className="field-label text-right">Prazo</span>
+                <span className="field-label text-right">Cotação</span>
                 <span />
               </div>
 
-              <div className="divide-y divide-slate-100">
-                {CARRIERS.map((carrier, index) => {
-                  const isSelected = selectedCarrier === carrier.id
+              <div className="divide-y divide-[hsl(var(--border))]">
+                {CARRIERS.map((c, i) => {
+                  const isSel = selected === c.id
                   return (
-                    <div
-                      key={carrier.id}
-                      className={`grid items-center gap-4 px-5 py-4 transition sm:grid-cols-[auto_1fr_auto_auto_auto_auto] ${isSelected ? 'bg-emerald-50' : ''}`}
-                    >
-                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center border text-emerald-700 ${isSelected ? 'border-emerald-400 bg-emerald-100' : 'border-slate-200 bg-emerald-50'}`}>
-                        <Truck size={18} />
+                    <div key={c.id} className={`grid items-center gap-4 px-5 py-4 transition sm:grid-cols-[auto_1fr_auto_auto_auto_auto] ${isSel ? 'bg-brand-50' : ''}`}>
+                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center border rounded-sm ${isSel ? 'border-brand-400 bg-brand-100 text-brand-700' : 'border-[hsl(var(--border))] bg-brand-50 text-brand-600'}`}>
+                        <Truck size={17} />
                       </div>
                       <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-bold text-emerald-950">{carrier.name}</h3>
-                          {index === 0 && (
-                            <span className="border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
-                              Melhor preço
-                            </span>
-                          )}
-                          {isSelected && (
-                            <span className="border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-blue-700">
-                              Selecionada
-                            </span>
-                          )}
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="font-bold text-[hsl(var(--text))]">{c.name}</p>
+                          {i === 0 && <span className="text-[10px] font-bold uppercase tracking-wide text-brand-700 border border-brand-200 bg-brand-50 px-1.5 py-0.5 rounded-sm">Melhor preço</span>}
+                          {isSel && <span className="text-[10px] font-bold uppercase tracking-wide text-sky-700 border border-sky-200 bg-sky-50 px-1.5 py-0.5 rounded-sm">Selecionada</span>}
                         </div>
-                        <p className="mt-0.5 text-xs text-slate-500">{carrier.detail}</p>
+                        <p className="mt-0.5 text-xs text-[hsl(var(--muted-fg))]">{c.detail}</p>
                       </div>
                       <div className="hidden text-right sm:block">
-                        <p className="flex items-center justify-end gap-1 text-sm font-bold text-emerald-700">
-                          <ShieldCheck size={12} />
-                          {carrier.score}
+                        <p className="flex items-center justify-end gap-1 text-sm font-bold text-brand-700">
+                          <ShieldCheck size={12} /> {c.score}
                         </p>
                       </div>
                       <div className="hidden text-right sm:block">
-                        <p className="text-sm font-bold text-slate-800">{carrier.time}</p>
+                        <p className="text-sm font-bold text-[hsl(var(--text))]">{c.time}</p>
                       </div>
                       <div className="hidden text-right sm:block">
-                        <p className="text-sm font-black text-emerald-950">
-                          R$ {carrier.price.toLocaleString('pt-BR')}
-                        </p>
+                        <p className="text-sm font-black text-[hsl(var(--text))]">R$ {c.price.toLocaleString('pt-BR')}</p>
                       </div>
-                      <Button
-                        size="sm"
-                        variant={isSelected ? 'outline' : 'primary'}
-                        onClick={() => handleSelect(carrier)}
-                      >
-                        {isSelected ? 'Selecionada' : 'Selecionar'}
-                        {isSelected && <BadgeCheck size={13} />}
+                      <Button size="sm" variant={isSel ? 'outline' : 'primary'} onClick={() => handleSelect(c)}>
+                        {isSel ? <><BadgeCheck size={13} /> Selecionada</> : 'Selecionar'}
                       </Button>
                     </div>
                   )
                 })}
               </div>
 
-              {selectedCarrier && (
-                <div className="border-t border-emerald-200 bg-emerald-50 px-5 py-4">
+              {selected && (
+                <div className="border-t border-brand-200 bg-brand-50 px-5 py-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-bold text-emerald-950">
-                        {CARRIERS.find((c) => c.id === selectedCarrier)?.name} selecionada
-                      </p>
-                      <p className="mt-0.5 text-xs text-emerald-700">Cotação vinculada. Confirme no painel do comprador após aceite da proposta.</p>
+                      <p className="font-bold text-brand-950">{CARRIERS.find((c) => c.id === selected)?.name} selecionada</p>
+                      <p className="mt-0.5 text-xs text-brand-700">Cotação vinculada. Confirme no painel do comprador após aceite da proposta.</p>
                     </div>
-                    <Button size="sm">
-                      Confirmar frete
-                      <ArrowRight size={13} />
-                    </Button>
+                    <Button size="sm">Confirmar frete <ArrowRight size={13} /></Button>
                   </div>
                 </div>
               )}
@@ -265,6 +220,6 @@ export default function LogisticsPage() {
           </div>
         </div>
       </div>
-    </section>
+    </div>
   )
 }
