@@ -6,8 +6,31 @@ const cors    = require('cors')
 const { v4: uuidv4 } = require('uuid')
 
 const app = express()
-app.use(cors())
+app.use(cors({
+  origin: process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',') : '*',
+  credentials: true,
+}))
 app.use(express.json())
+
+// ── SSE — ERD Live Events ──────────────────────────────────────
+const erdClients = new Set()
+
+app.get('/api/erd-events', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream')
+  res.setHeader('Cache-Control', 'no-cache')
+  res.setHeader('Connection', 'keep-alive')
+  res.setHeader('X-Accel-Buffering', 'no')
+  res.flushHeaders()
+  erdClients.add(res)
+  res.write('data: {"type":"connected"}\n\n')
+  const hb = setInterval(() => res.write(': heartbeat\n\n'), 25000)
+  req.on('close', () => { erdClients.delete(res); clearInterval(hb) })
+})
+
+function broadcastERD(action) {
+  const msg = `data: ${JSON.stringify({ type: 'erd', action })}\n\n`
+  erdClients.forEach((c) => c.write(msg))
+}
 
 const DB_CONFIG = {
   host:             process.env.DB_HOST     || 'mysql',
@@ -65,6 +88,7 @@ app.post('/api/auth/register', async (req, res) => {
       [id, email, hash, name || null, phone || null, r, avatar]
     )
     const token = jwt.sign({ id, email, role: r }, JWT_SECRET, { expiresIn: '7d' })
+    broadcastERD('login')
     res.json({ user: { id, email, name, phone, role: r, avatar, verified: false }, token })
   } catch (err) {
     if (err.code === 'ER_DUP_ENTRY') return res.status(400).json({ error: 'E-mail já cadastrado' })
@@ -83,6 +107,7 @@ app.post('/api/auth/login', async (req, res) => {
     if (!ok) return res.status(401).json({ error: 'Credenciais inválidas' })
     const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '7d' })
     const { password_hash, ...u } = user
+    broadcastERD('login')
     res.json({ user: u, token })
   } catch (err) {
     res.status(500).json({ error: err.message })
@@ -136,7 +161,8 @@ app.get('/api/listings', async (req, res) => {
     if (traceMin) { where.push('a.traceability_score >= ?');     params.push(Number(traceMin)) }
 
     const sql = `
-      SELECT a.*, u.name AS seller_name, u.verified AS seller_verified
+      SELECT a.*, u.name AS seller_name, u.verified AS seller_verified,
+        (SELECT url FROM fotos_anuncio WHERE anuncio_id = a.id AND is_cover = 1 LIMIT 1) AS cover_url
       FROM anuncios a
       LEFT JOIN users u ON a.seller_id = u.id
       WHERE ${where.join(' AND ')}
@@ -144,6 +170,7 @@ app.get('/api/listings', async (req, res) => {
       LIMIT ? OFFSET ?`
     params.push(Number(limit), Number(offset))
     const [rows] = await pool.query(sql, params)
+    broadcastERD('catalog')
     res.json(rows)
   } catch (err) {
     res.status(500).json({ error: err.message })
@@ -165,7 +192,8 @@ app.get('/api/listings/mine', auth, async (req, res) => {
 app.get('/api/listings/:id', async (req, res) => {
   try {
     const [rows] = await pool.query(
-      `SELECT a.*, u.name AS seller_name, u.verified AS seller_verified
+      `SELECT a.*, u.name AS seller_name, u.verified AS seller_verified,
+        (SELECT url FROM fotos_anuncio WHERE anuncio_id = a.id AND is_cover = 1 LIMIT 1) AS cover_url
        FROM anuncios a LEFT JOIN users u ON a.seller_id = u.id WHERE a.id = ?`,
       [req.params.id]
     )
@@ -188,6 +216,7 @@ app.post('/api/listings', auth, async (req, res) => {
       [id, req.user.id, title, category, breed, quantity, weight, price_total, price_per_head, price_per_arroba, city, state, description]
     )
     const [rows] = await pool.query('SELECT * FROM anuncios WHERE id = ?', [id])
+    broadcastERD('listing')
     res.json(rows[0])
   } catch (err) {
     res.status(500).json({ error: err.message })
@@ -231,6 +260,7 @@ app.post('/api/favorites/:id', auth, async (req, res) => {
       res.json({ saved: false })
     } else {
       await pool.query('INSERT INTO favoritos (id, user_id, anuncio_id) VALUES (?, ?, ?)', [uuidv4(), req.user.id, id])
+      broadcastERD('favorite')
       res.json({ saved: true })
     }
   } catch (err) {
@@ -279,6 +309,7 @@ app.post('/api/proposals', auth, async (req, res) => {
       [id, anuncio_id, req.user.id, seller_id, price_offered, signal_pct || 10, withdrawal_date || null, freight_mode || null, message || null]
     )
     const [rows] = await pool.query('SELECT * FROM propostas WHERE id = ?', [id])
+    broadcastERD('proposta')
     res.json(rows[0])
   } catch (err) {
     res.status(500).json({ error: err.message })
@@ -290,6 +321,7 @@ app.put('/api/proposals/:id/accept', auth, async (req, res) => {
     await pool.query('UPDATE propostas SET status = "aceita", seller_note = ? WHERE id = ? AND seller_id = ?',
       [req.body.note || '', req.params.id, req.user.id])
     const [rows] = await pool.query('SELECT * FROM propostas WHERE id = ?', [req.params.id])
+    broadcastERD('accept')
     res.json(rows[0])
   } catch (err) {
     res.status(500).json({ error: err.message })
@@ -334,6 +366,7 @@ app.post('/api/messages', auth, async (req, res) => {
       'SELECT m.*, u.name AS sender_name FROM mensagens m LEFT JOIN users u ON m.sender_id = u.id WHERE m.id = ?',
       [id]
     )
+    broadcastERD('message')
     res.json(rows[0])
   } catch (err) {
     res.status(500).json({ error: err.message })
@@ -347,6 +380,7 @@ app.get('/api/notifications', auth, async (req, res) => {
       'SELECT *, (read_at IS NULL) AS unread FROM notificacoes WHERE user_id = ? ORDER BY created_at DESC LIMIT 30',
       [req.user.id]
     )
+    if (rows.length) broadcastERD('notif')
     res.json(rows.map((r) => ({ ...r, read: !r.unread })))
   } catch (err) {
     res.status(500).json({ error: err.message })
@@ -363,12 +397,126 @@ app.put('/api/notifications/read-all', auth, async (req, res) => {
 })
 
 // ── Logistics ─────────────────────────────────────────────────
-app.get('/api/carriers', async (_req, res) => {
-  res.json([
-    { id: 1, nome_empresa: 'TransAgro Sul',    nota_media: 4.8, preco_estimado: 2850, tempo_estimado: '2-3 dias', veiculo: 'Boiadeiro 24m', capacidade: 40 },
-    { id: 2, nome_empresa: 'Frete Pecuário',   nota_media: 4.6, preco_estimado: 3100, tempo_estimado: '1-2 dias', veiculo: 'Bitrem 30m',    capacidade: 55 },
-    { id: 3, nome_empresa: 'AgroFrete Express',nota_media: 4.5, preco_estimado: 3400, tempo_estimado: '1 dia',    veiculo: 'Bitrem 30m',    capacidade: 48 },
-  ])
+const CITY_COORDS = {
+  'fortaleza':         [-3.7172,  -38.5433],
+  'recife':            [-8.0476,  -34.8770],
+  'salvador':          [-12.9714, -38.5014],
+  'são paulo':         [-23.5505, -46.6333],
+  'sao paulo':         [-23.5505, -46.6333],
+  'rio de janeiro':    [-22.9068, -43.1729],
+  'belo horizonte':    [-19.9167, -43.9345],
+  'brasília':          [-15.7801, -47.9292],
+  'brasilia':          [-15.7801, -47.9292],
+  'curitiba':          [-25.4278, -49.2731],
+  'porto alegre':      [-30.0346, -51.2177],
+  'manaus':            [-3.1019,  -60.0250],
+  'belém':             [-1.4558,  -48.5044],
+  'belem':             [-1.4558,  -48.5044],
+  'goiânia':           [-16.6869, -49.2648],
+  'goiania':           [-16.6869, -49.2648],
+  'maceió':            [-9.6658,  -35.7350],
+  'maceio':            [-9.6658,  -35.7350],
+  'natal':             [-5.7945,  -35.2110],
+  'teresina':          [-5.0892,  -42.8019],
+  'campo grande':      [-20.4697, -54.6201],
+  'cuiabá':            [-15.6014, -56.0979],
+  'cuiaba':            [-15.6014, -56.0979],
+  'palmas':            [-10.2491, -48.3243],
+  'são luís':          [-2.5364,  -44.3068],
+  'sao luis':          [-2.5364,  -44.3068],
+  'joão pessoa':       [-7.1195,  -34.8450],
+  'joao pessoa':       [-7.1195,  -34.8450],
+  'aracaju':           [-10.9167, -37.0500],
+  'vitória':           [-20.3155, -40.3128],
+  'vitoria':           [-20.3155, -40.3128],
+  'florianópolis':     [-27.5954, -48.5480],
+  'florianopolis':     [-27.5954, -48.5480],
+  'uberaba':           [-19.7476, -47.9307],
+  'uberlândia':        [-18.9113, -48.2622],
+  'uberlandia':        [-18.9113, -48.2622],
+  'ribeirão preto':    [-21.1775, -47.8103],
+  'ribeirao preto':    [-21.1775, -47.8103],
+  'campinas':          [-22.9056, -47.0608],
+  'maringá':           [-23.4273, -51.9375],
+  'maringa':           [-23.4273, -51.9375],
+  'londrina':          [-23.3045, -51.1696],
+  'cascavel':          [-24.9578, -53.4595],
+  'dourados':          [-22.2208, -54.8055],
+  'rondonópolis':      [-16.4727, -54.6361],
+  'rondonopolis':      [-16.4727, -54.6361],
+  'barretos':          [-20.5571, -48.5678],
+  'jataí':             [-17.8802, -51.7128],
+  'jatai':             [-17.8802, -51.7128],
+  'chapecó':           [-27.1007, -52.6152],
+  'chapeco':           [-27.1007, -52.6152],
+  'passo fundo':       [-28.2577, -52.4071],
+  'bagé':              [-31.3289, -54.1069],
+  'bage':              [-31.3289, -54.1069],
+  'petrolina':         [-9.3891,  -40.5019],
+  'mossoró':           [-5.1875,  -37.3444],
+  'mossoro':           [-5.1875,  -37.3444],
+  'montes claros':     [-16.7290, -43.8586],
+  'patos de minas':    [-18.5787, -46.5185],
+  'araxá':             [-19.5928, -46.9405],
+  'araxa':             [-19.5928, -46.9405],
+  'lavras':            [-21.2451, -44.9993],
+}
+
+function resolveCity(text) {
+  if (!text) return null
+  const norm = text.toLowerCase().replace(/,.*$/, '').trim()
+  if (CITY_COORDS[norm]) return CITY_COORDS[norm]
+  const key = Object.keys(CITY_COORDS).find((k) => norm.includes(k) || k.includes(norm))
+  return key ? CITY_COORDS[key] : null
+}
+
+function haversineKm([lat1, lon1], [lat2, lon2]) {
+  const R = 6371
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLon = (lon2 - lon1) * Math.PI / 180
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2
+  return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)))
+}
+
+app.get('/api/carriers', async (req, res) => {
+  const { origin, dest } = req.query
+  try {
+    const [rows] = await pool.query(`
+      SELECT u.id, u.name AS nome_empresa, u.verified,
+             t.veiculo, t.capacidade, t.nota_media, t.taxa_km
+      FROM users u
+      LEFT JOIN transportadoras t ON t.user_id = u.id
+      WHERE u.role = 'transportadora'
+      ORDER BY COALESCE(t.nota_media, 5.0) DESC
+    `)
+
+    const fromCoords = resolveCity(origin)
+    const toCoords   = resolveCity(dest)
+    const distKm     = fromCoords && toCoords ? haversineKm(fromCoords, toCoords) : null
+    const TAXA_PADRAO = 5.20
+
+    const result = rows.map((c) => {
+      const taxa  = c.taxa_km ? Number(c.taxa_km) : TAXA_PADRAO
+      const preco = distKm ? Math.round(distKm * taxa) : null
+      const dias  = distKm ? Math.max(1, Math.ceil(distKm / 650)) : null
+      return {
+        id:             c.id,
+        nome_empresa:   c.nome_empresa,
+        veiculo:        c.veiculo || 'A definir',
+        capacidade:     c.capacidade || null,
+        nota_media:     c.nota_media ? Number(c.nota_media) : null,
+        verified:       c.verified,
+        distancia_km:   distKm,
+        preco_estimado: preco,
+        tempo_estimado: dias ? (dias === 1 ? '1 dia' : `${dias} dias`) : null,
+      }
+    }).sort((a, b) => (a.preco_estimado ?? 9999999) - (b.preco_estimado ?? 9999999))
+
+    res.json(result)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
 })
 
 app.post('/api/freight', auth, async (req, res) => {
@@ -379,6 +527,7 @@ app.post('/api/freight', auth, async (req, res) => {
       'INSERT INTO solicitacoes_frete (id, anuncio_id, comprador_id, transportadora_id, origem, destino, data_coleta) VALUES (?, ?, ?, ?, ?, ?, ?)',
       [id, anuncio_id, req.user.id, transportadora_id, origem, destino, data_coleta || null]
     )
+    broadcastERD('frete')
     res.json({ id, status: 'AGUARDANDO' })
   } catch (err) {
     res.status(500).json({ error: err.message })
