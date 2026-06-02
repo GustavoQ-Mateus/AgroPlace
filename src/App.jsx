@@ -12,6 +12,8 @@ import ListingPage from './pages/ListingPage'
 import LogisticsPage from './pages/LogisticsPage'
 import SellerDashboard from './pages/SellerDashboard'
 import NotFoundPage from './pages/NotFoundPage'
+import IOSPage from './pages/IOSPage'
+import { SimulatorButton } from './components/IOSSimulator'
 
 function ProtectedRoute({ children }) {
   const user = useAuthStore((s) => s.user)
@@ -29,6 +31,9 @@ export default function App() {
     <BrowserRouter>
       <AppInit />
       <Routes>
+        {/* iOS simulator — standalone, fora do Layout */}
+        <Route path="ios" element={<IOSPage />} />
+
         <Route element={<Layout />} path="/">
           <Route index element={<LandingPage />} />
           <Route path="catalogo" element={<CatalogPage />} />
@@ -42,6 +47,7 @@ export default function App() {
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>
+      <SimulatorButton />
     </BrowserRouter>
   )
 }
