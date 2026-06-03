@@ -1,10 +1,9 @@
-import { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { X, Smartphone } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { motion } from 'framer-motion'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { isEmbedded } from '../lib/utils'
 
-export const isEmbedded =
-  typeof window !== 'undefined' &&
-  new URLSearchParams(window.location.search).get('embed') === 'true'
+export { isEmbedded } from '../lib/utils'
 
 function SignalIcon() {
   return (
@@ -37,8 +36,9 @@ function BatteryIcon() {
   )
 }
 
-export function IPhoneFrame({ onClose, showClose = true }) {
+export function IPhoneFrame() {
   const [time, setTime] = useState('')
+  const iframeRef = useRef(null)
 
   useEffect(() => {
     const fmt = () =>
@@ -48,12 +48,8 @@ export function IPhoneFrame({ onClose, showClose = true }) {
     return () => clearInterval(t)
   }, [])
 
-  useEffect(() => {
-    if (!showClose) return
-    const fn = (e) => { if (e.key === 'Escape') onClose?.() }
-    window.addEventListener('keydown', fn)
-    return () => window.removeEventListener('keydown', fn)
-  }, [onClose, showClose])
+  function goBack()    { iframeRef.current?.contentWindow?.history.back() }
+  function goForward() { iframeRef.current?.contentWindow?.history.forward() }
 
   return (
     <motion.div
@@ -95,12 +91,14 @@ export function IPhoneFrame({ onClose, showClose = true }) {
             boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.12)',
           }}
         >
-          {/* Status bar */}
+          {/* Status bar — frosted glass, like real iOS */}
           <div
             style={{
               position: 'absolute', top: 0, left: 0, right: 0,
               height: 54, zIndex: 10,
-              background: 'linear-gradient(to bottom, rgba(255,255,255,1) 65%, rgba(255,255,255,0))',
+              background: 'rgba(255,255,255,0.55)',
+              backdropFilter: 'blur(28px) saturate(1.8)',
+              WebkitBackdropFilter: 'blur(28px) saturate(1.8)',
               display: 'flex', alignItems: 'flex-end',
               justifyContent: 'space-between',
               padding: '0 28px 6px',
@@ -124,21 +122,64 @@ export function IPhoneFrame({ onClose, showClose = true }) {
             </div>
           </div>
 
-          {/* App content */}
+          {/* App content — rendered at true iPhone 390px viewport, scaled to fit screen */}
           <iframe
+            ref={iframeRef}
             src={window.location.origin + '/?embed=true'}
             title="AgroPlace App"
-            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: 390,
+              height: 869,
+              border: 'none',
+              transformOrigin: 'top left',
+              transform: 'scale(0.9487)',
+            }}
           />
 
-          {/* Home indicator */}
+          {/* Bottom nav bar — back / forward + home indicator */}
           <div style={{
-            position: 'absolute', bottom: 8, left: '50%',
-            transform: 'translateX(-50%)',
-            width: 130, height: 5,
-            background: 'rgba(0,0,0,0.2)', borderRadius: 10,
-            zIndex: 10, pointerEvents: 'none',
-          }} />
+            position: 'absolute', bottom: 0, left: 0, right: 0,
+            height: 52,
+            zIndex: 11,
+            background: 'rgba(249,249,249,0.88)',
+            backdropFilter: 'blur(28px) saturate(1.8)',
+            WebkitBackdropFilter: 'blur(28px) saturate(1.8)',
+            borderTop: '0.5px solid rgba(0,0,0,0.12)',
+            display: 'flex',
+            alignItems: 'center',
+          }}>
+            <button
+              onClick={goBack}
+              style={{
+                flex: 1, height: '100%',
+                background: 'none', border: 'none', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            >
+              <ChevronLeft size={24} color="#007AFF" strokeWidth={2.5} />
+            </button>
+            <button
+              onClick={goForward}
+              style={{
+                flex: 1, height: '100%',
+                background: 'none', border: 'none', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            >
+              <ChevronRight size={24} color="#007AFF" strokeWidth={2.5} />
+            </button>
+            {/* Home indicator pill */}
+            <div style={{
+              position: 'absolute', bottom: 6, left: '50%',
+              transform: 'translateX(-50%)',
+              width: 120, height: 4,
+              background: 'rgba(0,0,0,0.22)', borderRadius: 10,
+              pointerEvents: 'none',
+            }} />
+          </div>
         </div>
       </div>
 
@@ -150,51 +191,4 @@ export function IPhoneFrame({ onClose, showClose = true }) {
   )
 }
 
-function IPhoneModal({ onClose }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/85 backdrop-blur-md"
-      onClick={(e) => e.target === e.currentTarget && onClose()}
-    >
-      <div className="absolute top-5 left-1/2 -translate-x-1/2 text-white/40 text-xs font-medium tracking-widest uppercase">
-        Simulador — AgroPlace
-      </div>
-      <button
-        onClick={onClose}
-        className="absolute top-5 right-5 text-white/60 hover:text-white bg-white/10 hover:bg-white/20 rounded-full p-2 transition-colors"
-        title="Fechar (Esc)"
-      >
-        <X size={20} />
-      </button>
-      <IPhoneFrame onClose={onClose} showClose={true} />
-    </motion.div>
-  )
-}
-
-export function SimulatorButton() {
-  const [open, setOpen] = useState(false)
-  if (isEmbedded) return null
-
-  return (
-    <>
-      <motion.button
-        onClick={() => setOpen(true)}
-        whileHover={{ scale: 1.05, y: -2 }}
-        whileTap={{ scale: 0.96 }}
-        className="hidden md:flex fixed bottom-7 right-7 z-40 items-center gap-2.5 bg-zinc-900 text-white pl-4 pr-5 py-3 rounded-2xl shadow-2xl hover:bg-zinc-800 transition-colors border border-zinc-700"
-      >
-        <Smartphone size={18} strokeWidth={2} />
-        <span className="text-sm font-semibold tracking-tight">Ver no iPhone</span>
-      </motion.button>
-
-      <AnimatePresence>
-        {open && <IPhoneModal onClose={() => setOpen(false)} />}
-      </AnimatePresence>
-    </>
-  )
-}
-
-export default SimulatorButton
+export default IPhoneFrame

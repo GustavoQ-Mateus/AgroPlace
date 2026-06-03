@@ -13,8 +13,6 @@ export function AppProvider({ children }) {
   const [loadingAuth, setLoadingAuth] = useState(true)
 
   const [savedIds, setSavedIds]       = useState(new Set())
-  const [proposals, setProposals]     = useState([])
-  const [listings, setListings]       = useState([])
   const [toasts, setToasts]           = useState([])
   const [notifications, setNotifications] = useState([])
 
@@ -80,30 +78,14 @@ export function AppProvider({ children }) {
   }
 
   // ── Login ──────────────────────────────────────────────────
-  async function login(email, password, role) {
-    try {
-      const { user: u } = await authSvc.login({ email, password })
-      setUser(u)
-      setProfile(buildProfile(u))
-      await loadFavorites()
-      await loadNotifications()
-      addToast('Bem-vindo de volta!')
-      return u
-    } catch {
-      // Modo demo: aceita qualquer credencial quando API não está disponível
-      const demo = {
-        id:    'demo-' + Date.now(),
-        email,
-        role:  role || 'comprador',
-        name:  email.split('@')[0],
-        avatar: email.slice(0, 2).toUpperCase(),
-        verified: false,
-      }
-      setUser(demo)
-      setProfile(demo)
-      addToast(`Bem-vindo, ${demo.name}! (modo demo)`)
-      return demo
-    }
+  async function login(email, password) {
+    const { user: u } = await authSvc.login({ email, password })
+    setUser(u)
+    setProfile(buildProfile(u))
+    await loadFavorites()
+    await loadNotifications()
+    addToast('Bem-vindo de volta!')
+    return u
   }
 
   // ── Register ───────────────────────────────────────────────
@@ -121,7 +103,6 @@ export function AppProvider({ children }) {
     setUser(null)
     setProfile(null)
     setSavedIds(new Set())
-    setProposals([])
     setNotifications([])
     addToast('Sessão encerrada.', 'info')
   }
@@ -150,22 +131,6 @@ export function AppProvider({ children }) {
     }
   }
 
-  // ── Propostas (local fallback) ─────────────────────────────
-  function sendProposalLocal(data) {
-    const proposal = { ...data, id: 'prop-' + Date.now(), status: 'Aguardando', createdAt: new Date() }
-    setProposals((prev) => [proposal, ...prev])
-    addToast('Proposta enviada com sucesso!')
-    return proposal
-  }
-
-  // ── Anúncios locais ────────────────────────────────────────
-  function addListing(listing) {
-    const item = { ...listing, id: 'lst-' + Date.now(), status: 'Ativo', daysListed: 0 }
-    setListings((prev) => [item, ...prev])
-    addToast('Anúncio publicado com sucesso!')
-    return item
-  }
-
   // ── Notificações lidas ─────────────────────────────────────
   async function markNotifsRead() {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
@@ -182,14 +147,6 @@ export function AppProvider({ children }) {
     // Favoritos
     savedAnimals: savedIds,
     toggleSave,
-
-    // Propostas
-    proposals,
-    sendProposal: sendProposalLocal,
-
-    // Anúncios locais
-    listings,
-    addListing,
 
     // Notificações
     notifications,

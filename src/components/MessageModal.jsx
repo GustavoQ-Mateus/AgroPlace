@@ -33,11 +33,6 @@ export default function MessageModal({ anuncio, sellerId, onClose }) {
     setSending(true)
     const content = text.trim()
     setText('')
-    if (!user || user.id?.startsWith('demo-')) {
-      setMessages((prev) => [...prev, { id: Date.now(), sender_id: user?.id || 'demo', content, created_at: new Date().toISOString(), _local: true }])
-      setSending(false)
-      return
-    }
     try {
       const msg = await msgSvc.sendMessage({ anuncio_id: anuncio.id, receiver_id: sellerId, content })
       setMessages((prev) => [...prev, msg])
@@ -91,7 +86,7 @@ export default function MessageModal({ anuncio, sellerId, onClose }) {
               </div>
             )}
             {messages.map((msg) => {
-              const isMine = msg.sender_id === myId || msg._local
+              const isMine = msg.sender_id === myId
               return (
                 <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
                   <div className={`max-w-[80%] rounded-sm px-3 py-2 text-sm leading-5 ${

@@ -4,13 +4,15 @@ import Header from './Header'
 import Footer from './Footer'
 import ToastContainer from './ui/Toast'
 import CookieBanner from './ui/CookieBanner'
+import { isEmbedded } from '../lib/utils'
 
 export default function Layout() {
   const { pathname } = useLocation()
   return (
     <div className="flex min-h-dvh flex-col bg-[hsl(var(--bg))]">
       <Header />
-      <main className="flex-1 pt-14">
+      {/* pt-14 = header height; add 54px for iOS status bar when in simulator */}
+      <main className={isEmbedded ? 'flex-1 pt-[110px]' : 'flex-1 pt-14'}>
         <AnimatePresence mode="wait">
           <motion.div
             key={pathname}

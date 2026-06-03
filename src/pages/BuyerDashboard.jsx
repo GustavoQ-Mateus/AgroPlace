@@ -1,22 +1,19 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { CalendarCheck2, CheckCircle2, Clock3, FileText, Heart, MapPinned, PackageSearch, Search, Truck } from 'lucide-react'
 import Button from '../components/ui/Button'
 import Badge from '../components/ui/Badge'
-import { FEATURED_ANIMALS } from '../data/mockAnimals'
 import { formatCurrency } from '../lib/utils'
 import { useFavorites, useToggleFavorite } from '../hooks/useFavorites'
-
-const MOCK_PROPOSALS = [
-  { id: 'p1', animal: 'Lote Nelore Confinado PO', date: '28/05/2026', status: 'Aguardando', amount: 190000 },
-  { id: 'p2', animal: 'Lote Angus Nelore ½ Sangue', date: '20/05/2026', status: 'Aceita', amount: 168000 },
-]
+import { useAnimals } from '../hooks/useAnimals'
+import { getMyProposals } from '../services/proposalsService'
 
 const STEPS = [
   [CheckCircle2, 'Proposta enviada',    'Concluído',        'done'],
   [Clock3,       'Aceite do vendedor',  'Aguardando',       'active'],
   [FileText,     'Contrato e sinal',    'Após aceite',      'idle'],
-  [Truck,        'Frete e retirada',    '7 a 12 de junho',  'idle'],
+  [Truck,        'Frete e retirada',    'A definir',        'idle'],
 ]
 
 const stateStyle = {
@@ -28,7 +25,13 @@ const stateStyle = {
 export default function BuyerDashboard() {
   const { data: favIds = [] } = useFavorites()
   const toggle = useToggleFavorite()
-  const savedList = FEATURED_ANIMALS.filter((a) => favIds.includes(a.id))
+  const { data: allAnimals = [] } = useAnimals()
+  const { data: proposals = [], isLoading: proposalsLoading } = useQuery({
+    queryKey: ['my-proposals'],
+    queryFn: getMyProposals,
+  })
+
+  const savedList = allAnimals.filter((a) => favIds.includes(a.id))
 
   return (
     <div className="min-h-screen bg-[hsl(var(--bg))]">
@@ -53,20 +56,30 @@ export default function BuyerDashboard() {
             {/* Proposals */}
             <div className="card">
               <div className="panel-header">
-                <h2 className="font-bold text-[hsl(var(--text))]">Minhas propostas <span className="text-sm font-semibold text-[hsl(var(--muted-fg))]">({MOCK_PROPOSALS.length})</span></h2>
+                <h2 className="font-bold text-[hsl(var(--text))]">
+                  Minhas propostas{' '}
+                  {!proposalsLoading && <span className="text-sm font-semibold text-[hsl(var(--muted-fg))]">({proposals.length})</span>}
+                </h2>
               </div>
-              <div className="divide-y divide-[hsl(var(--border))]">
-                {MOCK_PROPOSALS.map((p) => (
-                  <div key={p.id} className="flex items-center justify-between gap-4 px-5 py-4">
-                    <div>
-                      <p className="font-semibold text-[hsl(var(--text))]">{p.animal}</p>
-                      <p className="mt-0.5 text-xs text-[hsl(var(--muted-fg))]">{p.date} · {formatCurrency(p.amount)}</p>
+              {proposalsLoading ? (
+                <div className="px-5 py-8 text-center text-sm text-[hsl(var(--muted-fg))]">Carregando…</div>
+              ) : proposals.length > 0 ? (
+                <div className="divide-y divide-[hsl(var(--border))]">
+                  {proposals.map((p) => (
+                    <div key={p.id} className="flex items-center justify-between gap-4 px-5 py-4">
+                      <div>
+                        <p className="font-semibold text-[hsl(var(--text))]">{p.animal || p.anuncio?.title || p.anuncio_id}</p>
+                        <p className="mt-0.5 text-xs text-[hsl(var(--muted-fg))]">
+                          {p.date || new Date(p.created_at).toLocaleDateString('pt-BR')} · {formatCurrency(p.amount || p.price_offered)}
+                        </p>
+                      </div>
+                      <Badge variant={p.status === 'Aceita' || p.status === 'ACEITA' ? 'active' : 'pending'}>
+                        {p.status}
+                      </Badge>
                     </div>
-                    <Badge variant={p.status === 'Aceita' ? 'active' : 'pending'}>{p.status}</Badge>
-                  </div>
-                ))}
-              </div>
-              {MOCK_PROPOSALS.length === 0 && (
+                  ))}
+                </div>
+              ) : (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <PackageSearch size={28} className="mb-3 text-[hsl(var(--border))]" />
                   <p className="font-bold text-[hsl(var(--text))]">Nenhuma proposta enviada</p>
@@ -76,51 +89,31 @@ export default function BuyerDashboard() {
             </div>
 
             {/* Timeline */}
-            <div className="card">
-              <div className="panel-header">
-                <h2 className="font-bold text-[hsl(var(--text))]">Progresso da negociação ativa</h2>
-              </div>
-              <div className="px-5 py-5">
-                <div className="relative">
-                  <div className="absolute left-5 top-5 bottom-5 w-px bg-[hsl(var(--border))]" />
-                  <div className="space-y-5">
-                    {STEPS.map(([Icon, label, sub, state]) => (
-                      <div key={label} className="relative flex items-start gap-4">
-                        <span className={`relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 ${stateStyle[state]}`}>
-                          <Icon size={15} />
-                        </span>
-                        <div className="pt-1.5">
-                          <p className="font-semibold text-sm text-[hsl(var(--text))]">{label}</p>
-                          <p className="text-xs text-[hsl(var(--muted-fg))]">{sub}</p>
+            {proposals.length > 0 && (
+              <div className="card">
+                <div className="panel-header">
+                  <h2 className="font-bold text-[hsl(var(--text))]">Progresso da negociação ativa</h2>
+                </div>
+                <div className="px-5 py-5">
+                  <div className="relative">
+                    <div className="absolute left-5 top-5 bottom-5 w-px bg-[hsl(var(--border))]" />
+                    <div className="space-y-5">
+                      {STEPS.map(([Icon, label, sub, state]) => (
+                        <div key={label} className="relative flex items-start gap-4">
+                          <span className={`relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 ${stateStyle[state]}`}>
+                            <Icon size={15} />
+                          </span>
+                          <div className="pt-1.5">
+                            <p className="font-semibold text-sm text-[hsl(var(--text))]">{label}</p>
+                            <p className="text-xs text-[hsl(var(--muted-fg))]">{sub}</p>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-
-            {/* Documents mock */}
-            <div className="card">
-              <div className="panel-header">
-                <h2 className="font-bold text-[hsl(var(--text))]">Documentos</h2>
-              </div>
-              <div className="divide-y divide-[hsl(var(--border))]">
-                {[
-                  ['GTA — Guia de Trânsito Animal', 'Disponível', 'active'],
-                  ['Contrato de compra e venda', 'Pendente assinatura', 'pending'],
-                  ['Nota fiscal do produtor', 'Aguardando aceite', 'paused'],
-                ].map(([name, status, variant]) => (
-                  <div key={name} className="flex items-center justify-between px-5 py-3.5">
-                    <div className="flex items-center gap-3">
-                      <FileText size={15} className="text-brand-600 shrink-0" />
-                      <p className="text-sm font-medium text-[hsl(var(--text))]">{name}</p>
-                    </div>
-                    <Badge variant={variant}>{status}</Badge>
-                  </div>
-                ))}
-              </div>
-            </div>
+            )}
           </div>
 
           {/* Sidebar */}
@@ -134,7 +127,7 @@ export default function BuyerDashboard() {
                 <div className="divide-y divide-[hsl(var(--border))]">
                   {savedList.map((a) => (
                     <div key={a.id} className="flex items-center gap-3 px-4 py-3">
-                      <img src={a.image} alt={a.title} className="h-12 w-14 object-cover rounded-sm shrink-0" />
+                      <img src={a.image ?? '/assets/hero-farm.jpg'} alt={a.title} className="h-12 w-14 object-cover rounded-sm shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-bold text-[hsl(var(--text))] line-clamp-1">{a.title}</p>
                         <p className="text-[11px] font-black text-brand-600">{formatCurrency(a.price)}</p>

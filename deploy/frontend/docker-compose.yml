@@ -1,0 +1,10 @@
+services:
+  frontend:
+    image: agroplace-frontend:latest
+    container_name: agroplace-app
+    restart: unless-stopped
+    environment:
+      API_HOST: ${API_HOST}
+    ports:
+      - "80:80"
+      - "443:443"

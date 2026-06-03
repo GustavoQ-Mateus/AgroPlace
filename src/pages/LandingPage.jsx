@@ -1,18 +1,12 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ArrowRight, CheckCircle2, ChevronLeft, ChevronRight, FileCheck2, MapPin, MessageSquare, Search, Shield, Truck, TrendingUp, Star } from 'lucide-react'
+import { ArrowRight, CheckCircle2, ChevronLeft, ChevronRight, FileCheck2, MapPin, MessageSquare, Search, Shield, Truck, TrendingUp } from 'lucide-react'
 import { motion } from 'framer-motion'
 import Button from '../components/ui/Button'
 import Badge from '../components/ui/Badge'
-import { FEATURED_ANIMALS, CATEGORIES } from '../data/mockAnimals'
+import { CATEGORIES } from '../data/mockAnimals'
 import { formatCurrency } from '../lib/utils'
-
-const STATS = [
-  ['4.200+', 'Lotes ativos'],
-  ['R$ 380M', 'Negociados em 2025'],
-  ['12.000+', 'Produtores cadastrados'],
-  ['27', 'Estados cobertos'],
-]
+import { useAnimals } from '../hooks/useAnimals'
 
 const HOW = [
   { icon: Shield,        n: '01', title: 'Verificação',    text: 'Documentos, vacinação, origem e score de rastreabilidade auditados antes da proposta.' },
@@ -21,11 +15,6 @@ const HOW = [
   { icon: Truck,         n: '04', title: 'Logística',      text: 'Cotação de frete integrada à proposta com transportadoras verificadas e rastreamento.' },
 ]
 
-const TESTIMONIALS = [
-  { name: 'Roberto Almeida', role: 'Fazenda Santa Cruz, MG', text: 'Fechei 3 lotes em uma semana. O processo é transparente, sem ligação desnecessária.', rating: 5 },
-  { name: 'Ana Beatriz Lima', role: 'Compradora, SP',        text: 'Consegui comparar 12 lotes de bovinos em menos de 20 minutos. Nunca foi tão fácil.', rating: 5 },
-  { name: 'Carlos Figueiredo', role: 'Haras Bela Vista, GO', text: 'A parte de documentação e rastreabilidade deu uma segurança que eu não tinha antes.', rating: 5 },
-]
 
 function HeroSection() {
   const navigate = useNavigate()
@@ -35,36 +24,74 @@ function HeroSection() {
     navigate(`/catalogo${q.trim() ? `?q=${encodeURIComponent(q.trim())}` : ''}`)
   }
   return (
-    <section className="relative overflow-hidden bg-brand-900 py-20 sm:py-28">
-      {/* Background texture */}
-      <div className="pointer-events-none absolute inset-0 opacity-10"
-        style={{ backgroundImage: 'repeating-linear-gradient(45deg,#fff 0,#fff 1px,transparent 0,transparent 50%)', backgroundSize: '24px 24px' }} />
+    <section className="relative overflow-hidden min-h-[580px] lg:min-h-[640px] flex items-center bg-brand-900">
 
-      <div className="page-container relative">
-        <motion.div className="max-w-2xl" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-          <span className="mb-4 inline-flex items-center gap-2 rounded-sm border border-brand-700 bg-brand-800/60 px-3 py-1 text-xs font-bold uppercase tracking-widest text-brand-300">
-            Marketplace B2B de animais de produção
-          </span>
-          <h1 className="text-4xl font-black leading-[1.1] tracking-tight text-white sm:text-5xl lg:text-6xl">
-            Compre e venda animais com <span className="text-brand-300">rastreabilidade total</span>
+      {/* ── Farm image — full background ── */}
+      <motion.div
+        className="absolute inset-0"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.8 }}
+      >
+        <img
+          src="/assets/hero-farm.jpg"
+          alt="Fazenda com bovinos e ovinos ao pôr do sol"
+          className="h-full w-full object-cover object-[65%_center] scale-[1.10] origin-center"
+          loading="eager"
+        />
+      </motion.div>
+
+      {/* ── Gradient overlay — desktop: esquerda para direita; mobile: tela toda ── */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background: [
+            /* mobile: cobre tudo para legibilidade */
+            'linear-gradient(to right,',
+            '  hsl(120,24%,12%) 0%,',
+            '  hsl(120,24%,12%) 30%,',
+            '  hsla(120,24%,12%,0.85) 45%,',
+            '  hsla(120,24%,12%,0.4) 62%,',
+            '  hsla(120,24%,12%,0.05) 78%,',
+            '  transparent 90%',
+            ')',
+          ].join(''),
+        }}
+      />
+      {/* Mobile: reforça o escurecimento vertical */}
+      <div className="absolute inset-0 bg-brand-900/60 lg:hidden" />
+
+      {/* ── Content ── */}
+      <div className="relative z-10 flex w-full flex-col justify-center px-6 py-20 sm:px-10 lg:w-[52%] lg:py-28 lg:pl-[max(2rem,calc((100vw-80rem)/2+2rem))]">
+        <motion.div
+          className="max-w-xl"
+          initial={{ opacity: 0, x: -24 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.55, ease: 'easeOut' }}
+        >
+          <h1 className="text-4xl font-black leading-[1.08] tracking-tight text-white sm:text-5xl lg:text-[3.25rem]">
+            Compre e venda animais com{' '}
+            <span className="text-brand-300">rastreabilidade total</span>
           </h1>
-          <p className="mt-5 text-lg leading-7 text-brand-200/80 max-w-xl">
+          <p className="mt-5 text-base leading-7 text-brand-200/80 sm:text-lg">
             Bovinos, equinos, aves e mais — com documentação, sanidade, frete e contrato digital em uma plataforma segura.
           </p>
-          <form onSubmit={handleSearch} className="mt-8 flex max-w-lg gap-2">
+
+          <form onSubmit={handleSearch} className="mt-8 flex max-w-md gap-2">
             <label className="relative flex-1">
-              <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-brand-400" />
+              <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-brand-400" />
               <input
                 type="search" value={q} onChange={(e) => setQ(e.target.value)}
                 placeholder="Raça, espécie, cidade…"
-                className="h-11 w-full border border-brand-700 bg-brand-800/60 pl-10 pr-3 text-sm text-white placeholder-brand-400 outline-none transition focus:border-brand-400 focus:ring-2 focus:ring-brand-400/20 rounded-sm"
+                className="h-11 w-full border border-brand-700 bg-brand-800/60 pl-9 pr-3 text-sm text-white placeholder-brand-400 outline-none transition focus:border-brand-400 focus:ring-2 focus:ring-brand-400/20 rounded-sm"
               />
             </label>
             <Button type="submit" size="lg" className="shrink-0">
-              Buscar <ArrowRight size={16} />
+              Buscar <ArrowRight size={15} />
             </Button>
           </form>
-          <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2">
+
+          <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2">
             {['Bovinos Nelore', 'Equinos Marchador', 'Aves Postura', 'Suínos F1'].map((tag) => (
               <Link key={tag} to={`/catalogo?q=${encodeURIComponent(tag)}`}
                 className="text-sm text-brand-300 underline-offset-2 transition hover:text-white hover:underline">
@@ -78,22 +105,6 @@ function HeroSection() {
   )
 }
 
-function StatsBar() {
-  return (
-    <div className="border-b border-[hsl(var(--border))] bg-[hsl(var(--surface))]">
-      <div className="page-container">
-        <div className="grid grid-cols-2 gap-px bg-[hsl(var(--border))] sm:grid-cols-4">
-          {STATS.map(([value, label]) => (
-            <div key={label} className="bg-[hsl(var(--surface))] px-6 py-5 text-center">
-              <p className="text-2xl font-black text-brand-600">{value}</p>
-              <p className="mt-0.5 text-xs font-semibold uppercase tracking-wide text-[hsl(var(--muted-fg))]">{label}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-}
 
 function CategorySection() {
   return (
@@ -113,10 +124,7 @@ function CategorySection() {
               <div className="relative h-14 w-14 overflow-hidden rounded-full border-2 border-[hsl(var(--border))] group-hover:border-brand-400 transition">
                 <img src={cat.image} alt={cat.label} className="h-full w-full object-cover" />
               </div>
-              <div>
-                <p className="text-sm font-bold text-[hsl(var(--text))] group-hover:text-brand-600 transition">{cat.label}</p>
-                <p className="text-[11px] text-[hsl(var(--muted-fg))]">{cat.count.toLocaleString('pt-BR')} lotes</p>
-              </div>
+              <p className="text-sm font-bold text-[hsl(var(--text))] group-hover:text-brand-600 transition">{cat.label}</p>
             </Link>
           ))}
         </div>
@@ -126,10 +134,11 @@ function CategorySection() {
 }
 
 function FeaturedListings() {
-  const animals = FEATURED_ANIMALS.slice(0, 6)
+  const { data: allAnimals = [], isLoading } = useAnimals({ limit: 6 })
+  const animals = allAnimals.slice(0, 6)
   const [slide, setSlide] = useState(0)
   const perPage = 3
-  const pages = Math.ceil(animals.length / perPage)
+  const pages = Math.max(1, Math.ceil(animals.length / perPage))
   const visible = animals.slice(slide * perPage, slide * perPage + perPage)
 
   return (
@@ -151,11 +160,14 @@ function FeaturedListings() {
             </button>
           </div>
         </div>
+        {isLoading && (
+          <div className="text-center py-8 text-sm text-[hsl(var(--muted-fg))]">Carregando lotes…</div>
+        )}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {visible.map((a) => (
             <Link key={a.id} to={`/anuncio/${a.id}`} className="group card card-hover block overflow-hidden">
               <div className="relative overflow-hidden h-48">
-                <img src={a.image} alt={a.title} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
+                <img src={a.image ?? '/assets/hero-farm.jpg'} alt={a.title} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
                 {/* Hover overlay */}
                 <div className="absolute inset-0 flex items-end bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-4">
                   <Button size="sm" className="w-full">Ver lote <ArrowRight size={13} /></Button>
@@ -251,34 +263,6 @@ function TrustSection() {
   )
 }
 
-function TestimonialsSection() {
-  return (
-    <section className="py-16 border-b border-[hsl(var(--border))]">
-      <div className="page-container">
-        <div className="mb-10 text-center">
-          <p className="section-eyebrow mb-2">Depoimentos</p>
-          <h2 className="section-title">O que dizem nossos usuários</h2>
-        </div>
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {TESTIMONIALS.map((t) => (
-            <div key={t.name} className="card p-6 flex flex-col gap-4">
-              <div className="flex gap-0.5">
-                {Array.from({ length: t.rating }).map((_, i) => (
-                  <Star key={i} size={14} className="text-accent-500 fill-accent-500" />
-                ))}
-              </div>
-              <p className="text-sm leading-7 text-[hsl(var(--text-sub))] flex-1">"{t.text}"</p>
-              <div>
-                <p className="text-sm font-bold text-[hsl(var(--text))]">{t.name}</p>
-                <p className="text-xs text-[hsl(var(--muted-fg))]">{t.role}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  )
-}
 
 function CTASection() {
   return (
@@ -301,12 +285,10 @@ export default function LandingPage() {
   return (
     <>
       <HeroSection />
-      <StatsBar />
       <CategorySection />
       <FeaturedListings />
       <HowItWorks />
       <TrustSection />
-      <TestimonialsSection />
       <CTASection />
     </>
   )

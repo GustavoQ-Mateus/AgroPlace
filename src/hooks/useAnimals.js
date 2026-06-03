@@ -1,31 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { searchListings, getListing, createListing, updateListing, deleteListing, getMyListings } from '../services/listingsService'
-import { FEATURED_ANIMALS } from '../data/mockAnimals'
 
 export function useAnimals(filters = {}) {
   return useQuery({
     queryKey: ['animals', filters],
-    queryFn: async () => {
-      try {
-        const data = await searchListings(filters)
-        return data?.length ? data : FEATURED_ANIMALS
-      } catch {
-        return FEATURED_ANIMALS
-      }
-    },
+    queryFn: () => searchListings(filters),
   })
 }
 
 export function useAnimal(id) {
   return useQuery({
     queryKey: ['animal', id],
-    queryFn: async () => {
-      try {
-        return await getListing(id)
-      } catch {
-        return FEATURED_ANIMALS.find((a) => String(a.id) === String(id)) ?? null
-      }
-    },
+    queryFn: () => getListing(id),
     enabled: !!id,
   })
 }
@@ -33,13 +19,7 @@ export function useAnimal(id) {
 export function useMyListings() {
   return useQuery({
     queryKey: ['my-listings'],
-    queryFn: async () => {
-      try {
-        return await getMyListings()
-      } catch {
-        return FEATURED_ANIMALS.slice(0, 5)
-      }
-    },
+    queryFn: getMyListings,
   })
 }
 

@@ -128,3 +128,15 @@ CREATE TABLE IF NOT EXISTS solicitacoes_frete (
   status            VARCHAR(50)  DEFAULT 'AGUARDANDO',
   created_at        TIMESTAMP    DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS transportadoras (
+  id           VARCHAR(36)   PRIMARY KEY,
+  nome_empresa VARCHAR(255)  NOT NULL,
+  veiculo      VARCHAR(100),
+  capacidade   INT,
+  nota_media   DECIMAL(3,1)  DEFAULT 5.0,
+  taxa_km      DECIMAL(6,2)  DEFAULT 5.00,
+  ativo        BOOLEAN       DEFAULT TRUE,
+  created_at   TIMESTAMP     DEFAULT CURRENT_TIMESTAMP
+);
+

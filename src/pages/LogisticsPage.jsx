@@ -1,29 +1,21 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { ArrowRight, BadgeCheck, MapPinned, Route, ShieldCheck, Truck } from 'lucide-react'
+
+const MapaRota = lazy(() => import('../components/MapaRota'))
 import Button from '../components/ui/Button'
 import { FieldGroup } from '../components/ui/Input'
 import { useUiStore } from '../stores/uiStore'
-
-const CARRIERS = [
-  { id: 'c1', name: 'Boiadeiro Express', price: 8400,  time: '2 dias', score: '98%', detail: 'Carreta boiadeira · 42 cabeças' },
-  { id: 'c2', name: 'AgroRota Sul',      price: 9150,  time: '3 dias', score: '94%', detail: 'Baú climatizado para aves e suínos' },
-  { id: 'c3', name: 'TransCampo Prime',  price: 10200, time: '1 dia',  score: '97%', detail: 'Motorista habilitado em bem-estar animal' },
-]
-
-const ROUTE_DETAILS = [
-  ['Distância',     '523 km'],
-  ['Pedágios',      'R$ 620'],
-  ['Paradas manejo','2 pontos'],
-  ['Risco climático','Baixo'],
-]
+import { getCarriers, requestFreight } from '../services/logisticsService'
 
 const SPECIES = ['Bovinos', 'Equinos', 'Suínos', 'Aves', 'Ovinos', 'Caprinos']
 
 export default function LogisticsPage() {
   const addToast = useUiStore((s) => s.addToast)
-  const [form, setForm] = useState({ origin: 'Uberaba, MG', dest: 'Campinas, SP', species: 'Bovinos', qty: '40', window: '7 a 12 de junho' })
+  const [form, setForm] = useState({ origin: '', dest: '', species: 'Bovinos', qty: '', window: '' })
+  const [carriers, setCarriers] = useState([])
   const [selected, setSelected] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [confirmLoading, setConfirmLoading] = useState(false)
   const [calculated, setCalculated] = useState(false)
 
   function field(k, v) { setForm((f) => ({ ...f, [k]: v })) }
@@ -33,15 +25,33 @@ export default function LogisticsPage() {
     if (!form.origin || !form.dest) { addToast('Informe origem e destino.', 'error'); return }
     setLoading(true)
     setSelected(null)
-    await new Promise((r) => setTimeout(r, 800))
-    setCalculated(true)
+    try {
+      const data = await getCarriers({ origin: form.origin, dest: form.dest, qty: form.qty })
+      setCarriers(data ?? [])
+      setCalculated(true)
+      addToast('Rota calculada com sucesso!')
+    } catch {
+      addToast('Erro ao buscar transportadoras. Tente novamente.', 'error')
+    }
     setLoading(false)
-    addToast('Rota calculada com sucesso!')
+  }
+
+  async function handleConfirm() {
+    const carrier = carriers.find((c) => c.id === selected)
+    if (!carrier) return
+    setConfirmLoading(true)
+    try {
+      await requestFreight({ ...form, carrier_id: carrier.id })
+      addToast('Frete confirmado com sucesso!')
+    } catch {
+      addToast('Erro ao confirmar frete.', 'error')
+    }
+    setConfirmLoading(false)
   }
 
   function handleSelect(carrier) {
     setSelected(carrier.id)
-    addToast(`${carrier.name} selecionada. Cotação vinculada à proposta.`)
+    addToast(`${carrier.nome_empresa || carrier.name} selecionada. Cotação vinculada à proposta.`)
   }
 
   return (
@@ -110,7 +120,7 @@ export default function LogisticsPage() {
           </aside>
 
           <div className="space-y-5">
-            {/* Route map */}
+            {/* Route map placeholder */}
             {!calculated ? (
               <div className="card flex flex-col items-center justify-center py-16 text-center">
                 <Route size={32} className="mb-3 text-[hsl(var(--border))]" />
@@ -123,100 +133,113 @@ export default function LogisticsPage() {
                   <h2 className="flex items-center gap-2 font-bold text-[hsl(var(--text))]">
                     <MapPinned className="text-brand-600" size={16} /> Rota sugerida
                   </h2>
-                  <span className="text-xs font-bold text-brand-700 border border-brand-200 bg-brand-50 px-2 py-0.5 rounded-sm">
-                    {form.origin} → {form.dest}
-                  </span>
-                </div>
-                <div className="grid sm:grid-cols-[1fr_200px] sm:divide-x divide-[hsl(var(--border))]">
-                  <div className="relative min-h-48 bg-brand-50"
-                    style={{ backgroundImage: 'repeating-linear-gradient(45deg,hsl(var(--border)) 0,hsl(var(--border)) 1px,transparent 0,transparent 50%)', backgroundSize: '20px 20px' }}>
-                    <div className="absolute left-6 top-6 card px-3 py-2 shadow-sm">
-                      <p className="field-label mb-0.5">Origem</p>
-                      <p className="text-sm font-black text-[hsl(var(--text))]">{form.origin}</p>
-                    </div>
-                    <div className="absolute bottom-6 right-6 card px-3 py-2 shadow-sm">
-                      <p className="field-label mb-0.5">Destino</p>
-                      <p className="text-sm font-black text-[hsl(var(--text))]">{form.dest}</p>
-                    </div>
-                    <div className="absolute left-[18%] top-1/2 h-1 w-[62%] -translate-y-1/2 -rotate-6 bg-brand-600 rounded-full" />
-                  </div>
-                  <div className="divide-y divide-[hsl(var(--border))]">
-                    {ROUTE_DETAILS.map(([label, value]) => (
-                      <div key={label} className="px-4 py-3.5">
-                        <p className="field-label mb-0.5">{label}</p>
-                        <p className="text-sm font-bold text-[hsl(var(--text))]">{value}</p>
-                      </div>
-                    ))}
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-brand-700 border border-brand-200 bg-brand-50 px-2 py-0.5 rounded-sm">
+                      {form.origin} → {form.dest}
+                    </span>
+                    {carriers[0]?.distancia_km && (
+                      <span className="text-xs text-[hsl(var(--muted-fg))]">
+                        ~{carriers[0].distancia_km.toLocaleString('pt-BR')} km
+                      </span>
+                    )}
                   </div>
                 </div>
+                <Suspense fallback={
+                  <div className="flex items-center justify-center py-16">
+                    <p className="text-sm text-[hsl(var(--muted-fg))]">Carregando mapa…</p>
+                  </div>
+                }>
+                  <MapaRota origin={form.origin} destination={form.dest} />
+                </Suspense>
               </div>
             )}
 
             {/* Carriers */}
-            <div className="card">
-              <div className="panel-header">
-                <h2 className="flex items-center gap-2 font-bold text-[hsl(var(--text))]">
-                  <Truck className="text-brand-600" size={15} /> Transportadoras disponíveis
-                </h2>
-                <span className="text-xs font-semibold text-[hsl(var(--muted-fg))]">{CARRIERS.length} opções</span>
-              </div>
-
-              <div className="hidden grid-cols-[auto_1fr_auto_auto_auto_auto] items-center gap-4 border-b border-[hsl(var(--border))] bg-[hsl(var(--muted))] px-5 py-2 sm:grid">
-                <span />
-                <span className="field-label">Transportadora</span>
-                <span className="field-label text-right">Score</span>
-                <span className="field-label text-right">Prazo</span>
-                <span className="field-label text-right">Cotação</span>
-                <span />
-              </div>
-
-              <div className="divide-y divide-[hsl(var(--border))]">
-                {CARRIERS.map((c, i) => {
-                  const isSel = selected === c.id
-                  return (
-                    <div key={c.id} className={`grid items-center gap-4 px-5 py-4 transition sm:grid-cols-[auto_1fr_auto_auto_auto_auto] ${isSel ? 'bg-brand-50' : ''}`}>
-                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center border rounded-sm ${isSel ? 'border-brand-400 bg-brand-100 text-brand-700' : 'border-[hsl(var(--border))] bg-brand-50 text-brand-600'}`}>
-                        <Truck size={17} />
-                      </div>
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="font-bold text-[hsl(var(--text))]">{c.name}</p>
-                          {i === 0 && <span className="text-[10px] font-bold uppercase tracking-wide text-brand-700 border border-brand-200 bg-brand-50 px-1.5 py-0.5 rounded-sm">Melhor preço</span>}
-                          {isSel && <span className="text-[10px] font-bold uppercase tracking-wide text-sky-700 border border-sky-200 bg-sky-50 px-1.5 py-0.5 rounded-sm">Selecionada</span>}
-                        </div>
-                        <p className="mt-0.5 text-xs text-[hsl(var(--muted-fg))]">{c.detail}</p>
-                      </div>
-                      <div className="hidden text-right sm:block">
-                        <p className="flex items-center justify-end gap-1 text-sm font-bold text-brand-700">
-                          <ShieldCheck size={12} /> {c.score}
-                        </p>
-                      </div>
-                      <div className="hidden text-right sm:block">
-                        <p className="text-sm font-bold text-[hsl(var(--text))]">{c.time}</p>
-                      </div>
-                      <div className="hidden text-right sm:block">
-                        <p className="text-sm font-black text-[hsl(var(--text))]">R$ {c.price.toLocaleString('pt-BR')}</p>
-                      </div>
-                      <Button size="sm" variant={isSel ? 'outline' : 'primary'} onClick={() => handleSelect(c)}>
-                        {isSel ? <><BadgeCheck size={13} /> Selecionada</> : 'Selecionar'}
-                      </Button>
-                    </div>
-                  )
-                })}
-              </div>
-
-              {selected && (
-                <div className="border-t border-brand-200 bg-brand-50 px-5 py-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-bold text-brand-950">{CARRIERS.find((c) => c.id === selected)?.name} selecionada</p>
-                      <p className="mt-0.5 text-xs text-brand-700">Cotação vinculada. Confirme no painel do comprador após aceite da proposta.</p>
-                    </div>
-                    <Button size="sm">Confirmar frete <ArrowRight size={13} /></Button>
-                  </div>
+            {calculated && (
+              <div className="card">
+                <div className="panel-header">
+                  <h2 className="flex items-center gap-2 font-bold text-[hsl(var(--text))]">
+                    <Truck className="text-brand-600" size={15} /> Transportadoras disponíveis
+                  </h2>
+                  <span className="text-xs font-semibold text-[hsl(var(--muted-fg))]">{carriers.length} opções</span>
                 </div>
-              )}
-            </div>
+
+                {carriers.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <Truck size={28} className="mb-3 text-[hsl(var(--border))]" />
+                    <p className="font-bold text-[hsl(var(--text))]">Nenhuma transportadora disponível</p>
+                    <p className="mt-1 text-sm text-[hsl(var(--muted-fg))]">Tente outra rota ou espécie.</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="hidden grid-cols-[auto_1fr_auto_auto_auto_auto] items-center gap-4 border-b border-[hsl(var(--border))] bg-[hsl(var(--muted))] px-5 py-2 sm:grid">
+                      <span />
+                      <span className="field-label">Transportadora</span>
+                      <span className="field-label text-right">Score</span>
+                      <span className="field-label text-right">Prazo</span>
+                      <span className="field-label text-right">Cotação</span>
+                      <span />
+                    </div>
+
+                    <div className="divide-y divide-[hsl(var(--border))]">
+                      {carriers.map((c, i) => {
+                        const isSel = selected === c.id
+                        const name = c.nome_empresa || c.name
+                        const score = c.nota_media ? `${c.nota_media}/5` : c.score
+                        const time = c.tempo_estimado || c.time
+                        const price = c.preco_estimado || c.price
+                        const detail = c.veiculo ? `${c.veiculo} · ${c.capacidade} cabeças` : c.detail
+                        return (
+                          <div key={c.id} className={`flex items-center gap-3 px-4 py-3 sm:grid sm:items-center sm:gap-4 sm:grid-cols-[auto_1fr_auto_auto_auto_auto] sm:px-5 sm:py-4 transition ${isSel ? 'bg-brand-50' : ''}`}>
+                            <div className={`flex h-10 w-10 shrink-0 items-center justify-center border rounded-sm ${isSel ? 'border-brand-400 bg-brand-100 text-brand-700' : 'border-[hsl(var(--border))] bg-brand-50 text-brand-600'}`}>
+                              <Truck size={17} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="font-bold text-[hsl(var(--text))] truncate">{name}</p>
+                                {i === 0 && <span className="text-[10px] font-bold uppercase tracking-wide text-brand-700 border border-brand-200 bg-brand-50 px-1.5 py-0.5 rounded-sm">Melhor preço</span>}
+                                {isSel && <span className="text-[10px] font-bold uppercase tracking-wide text-sky-700 border border-sky-200 bg-sky-50 px-1.5 py-0.5 rounded-sm">Selecionada</span>}
+                              </div>
+                              {detail && <p className="mt-0.5 text-xs text-[hsl(var(--muted-fg))]">{detail}</p>}
+                            </div>
+                            <div className="hidden text-right sm:block">
+                              <p className="flex items-center justify-end gap-1 text-sm font-bold text-brand-700">
+                                <ShieldCheck size={12} /> {score}
+                              </p>
+                            </div>
+                            <div className="hidden text-right sm:block">
+                              <p className="text-sm font-bold text-[hsl(var(--text))]">{time}</p>
+                            </div>
+                            <div className="hidden text-right sm:block">
+                              <p className="text-sm font-black text-[hsl(var(--text))]">
+                                {typeof price === 'number' ? `R$ ${price.toLocaleString('pt-BR')}` : price}
+                              </p>
+                            </div>
+                            <Button size="sm" variant={isSel ? 'outline' : 'primary'} onClick={() => handleSelect(c)}>
+                              {isSel ? <><BadgeCheck size={13} /> Selecionada</> : 'Selecionar'}
+                            </Button>
+                          </div>
+                        )
+                      })}
+                    </div>
+
+                    {selected && (
+                      <div className="border-t border-brand-200 bg-brand-50 px-5 py-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-bold text-brand-950">{carriers.find((c) => c.id === selected)?.nome_empresa || carriers.find((c) => c.id === selected)?.name} selecionada</p>
+                            <p className="mt-0.5 text-xs text-brand-700">Cotação vinculada. Confirme no painel do comprador após aceite da proposta.</p>
+                          </div>
+                          <Button size="sm" loading={confirmLoading} onClick={handleConfirm}>
+                            {!confirmLoading && <>Confirmar frete <ArrowRight size={13} /></>}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

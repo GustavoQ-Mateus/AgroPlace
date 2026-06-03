@@ -1,0 +1,16 @@
+services:
+  api:
+    image: agroplace-api:latest
+    container_name: agroplace-api
+    restart: unless-stopped
+    environment:
+      DB_HOST:       ${DB_HOST}
+      DB_PORT:       3306
+      DB_USER:       agroplace
+      DB_PASS:       ${DB_PASS}
+      DB_NAME:       agroplace
+      JWT_SECRET:    ${JWT_SECRET}
+      FRONTEND_URL:  ${FRONTEND_URL}
+      PORT:          3001
+    ports:
+      - "3001:3001"

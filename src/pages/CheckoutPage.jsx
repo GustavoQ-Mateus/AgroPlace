@@ -3,15 +3,15 @@ import { Link, useParams } from 'react-router-dom'
 import { ArrowRight, BadgeDollarSign, CheckCircle2, FileSignature, LockKeyhole, MessageSquare, PenLine, Truck } from 'lucide-react'
 import Button from '../components/ui/Button'
 import { FieldGroup } from '../components/ui/Input'
-import { FEATURED_ANIMALS } from '../data/mockAnimals'
 import { formatCurrency } from '../lib/utils'
 import { useUiStore } from '../stores/uiStore'
 import { sendProposal as sendProposalAPI } from '../services/proposalsService'
+import { useAnimal } from '../hooks/useAnimals'
 
 export default function CheckoutPage() {
   const { id } = useParams()
   const addToast = useUiStore((s) => s.addToast)
-  const animal = FEATURED_ANIMALS.find((a) => String(a.id) === String(id))
+  const { data: animal, isLoading, isError } = useAnimal(id)
 
   const [step, setStep] = useState(1)
   const [submitted, setSubmitted] = useState(false)
@@ -20,16 +20,22 @@ export default function CheckoutPage() {
   const [acceptTerms, setAcceptTerms] = useState(false)
   const [loading, setLoading] = useState(false)
   const [form, setForm] = useState({
-    price: 'R$ 190.000',
+    price: '',
     signal: '10%',
     date: '',
     freight: 'Transportadora parceira AgroPlace',
-    message: 'Tenho interesse no lote completo. Gostaria de confirmar protocolo sanitário e janela de embarque.',
+    message: '',
   })
 
   function field(k, v) { setForm((f) => ({ ...f, [k]: v })) }
 
-  if (!animal) return (
+  if (isLoading) return (
+    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4">
+      <p className="text-sm text-[hsl(var(--muted-fg))]">Carregando anúncio…</p>
+    </div>
+  )
+
+  if (isError || !animal) return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4">
       <p className="text-lg font-bold">Anúncio não encontrado</p>
       <Link to="/catalogo" className="text-sm font-semibold text-brand-600 hover:underline">← Voltar ao catálogo</Link>
@@ -43,14 +49,18 @@ export default function CheckoutPage() {
     try {
       await sendProposalAPI({
         anuncio_id: animal.id,
-        seller_id: animal.seller || 'unknown',
+        seller_id: animal.seller_id,
         price_offered: +(form.price.replace(/[^\d]/g, '') || 0),
         signal_pct: +(form.signal.replace('%', '') || 10),
         withdrawal_date: form.date,
         freight_mode: form.freight,
         message: form.message,
       })
-    } catch { /* demo fallback */ }
+    } catch {
+      addToast('Erro ao enviar proposta. Tente novamente.', 'error')
+      setLoading(false)
+      return
+    }
     setLoading(false)
     setSubmitted(true)
   }
@@ -232,7 +242,6 @@ export default function CheckoutPage() {
                   ['Preço anunciado', formatCurrency(animal.price)],
                   ['Sua oferta', form.price],
                   ['Sinal estimado', form.signal],
-                  ['Frete estimado', 'R$ 8.400'],
                 ].map(([label, value]) => (
                   <div key={label} className="flex items-center justify-between py-3">
                     <span className="text-sm text-[hsl(var(--muted-fg))]">{label}</span>

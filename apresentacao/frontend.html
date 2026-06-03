@@ -111,11 +111,11 @@
     <div class="anim-child" style="margin-top:24px; display:flex; gap:48px; flex-wrap:wrap;">
       <div><div class="label">Runtime</div><div class="body-sm">React 18 + Vite</div></div>
       <div><div class="label">Estilo</div><div class="body-sm">Tailwind CSS 3</div></div>
-      <div><div class="label">Backend</div><div class="body-sm">Supabase JS Client</div></div>
+      <div><div class="label">Backend</div><div class="body-sm">REST API — Node.js/Express</div></div>
       <div><div class="label">Animacoes</div><div class="body-sm">Framer Motion</div></div>
     </div>
     <p class="body anim-child" style="max-width:520px; margin-top:40px;">
-      SPA com oito telas, camada de servicos isolada, autenticacao JWT e integracao direta com Supabase para persistencia e storage de imagens.
+      SPA com oito telas, camada de servicos isolada, autenticacao JWT e comunicacao via REST API com backend Node.js/Express em producao na AWS EC2.
     </p>
   </section>
 
@@ -134,12 +134,12 @@
         <div style="margin-bottom:8px; margin-top:4px;"><span class="layer-name">Camada de Servicos</span></div>
         <div style="padding-left:16px;"><span class="layer-tech">authService</span> <span style="color:var(--muted);">·</span> <span class="layer-tech">listingsService</span></div>
         <div style="padding-left:16px;"><span class="layer-tech">proposalsService</span> <span style="color:var(--muted);">·</span> <span class="layer-tech">logisticsService</span></div>
-        <div style="padding-left:16px;"><span class="layer-tech">favoritesService</span> <span style="color:var(--muted);">·</span> <span class="layer-tech">uploadsService</span></div>
+        <div style="padding-left:16px;"><span class="layer-tech">favoritesService</span> <span style="color:var(--muted);">·</span> <span class="layer-tech">messagesService</span></div>
         <div style="padding-left:16px;"><span class="layer-tech">notificationsService</span></div>
         <div class="arrow" style="padding-left:8px;">      |</div>
         <div class="arrow" style="padding-left:8px;">      v</div>
-        <div style="margin-bottom:8px;"><span class="layer-name">Supabase Client</span> <span style="color:var(--muted);">(@supabase/supabase-js)</span></div>
-        <div style="padding-left:16px; color:var(--muted);">PostgREST API · Auth · Storage</div>
+        <div style="margin-bottom:8px;"><span class="layer-name">REST API</span> <span style="color:var(--muted);">Node.js / Express — AWS EC2</span></div>
+        <div style="padding-left:16px; color:var(--muted);">JWT Auth · MySQL 8 · Docker Compose</div>
       </div>
       <div class="col-divider">
         <div class="label" style="margin-bottom:16px;">Roteamento</div>
@@ -199,9 +199,9 @@
             <td>Sem CSS personalizado, design tokens no config, purge automatico elimina CSS morto em producao</td>
           </tr>
           <tr>
-            <td>Supabase</td>
-            <td>BaaS + Storage</td>
-            <td>PostgreSQL gerenciado, auth built-in, storage para fotos dos anuncios, SDK JS isomorfico</td>
+            <td>Express / Node.js</td>
+            <td>REST API backend</td>
+            <td>API REST propria em Node.js/Express com MySQL2, JWT (jsonwebtoken) e bcrypt — conteinerizada em Docker na AWS EC2</td>
           </tr>
           <tr>
             <td>Framer Motion</td>
@@ -241,11 +241,11 @@
       </div>
       <div class="def-row" style="grid-template-columns:220px 1fr;">
         <div class="def-term">favoritesService</div>
-        <div class="def-desc">Adicao e remocao de anuncios favoritos, listagem de favoritos por usuario — tabela <code>favoritos</code> no Supabase</div>
+        <div class="def-desc">Adicao e remocao de anuncios favoritos, listagem de favoritos por usuario — tabela <code>favoritos</code> no MySQL via REST API</div>
       </div>
       <div class="def-row" style="grid-template-columns:220px 1fr;">
-        <div class="def-term">uploadsService</div>
-        <div class="def-desc">Upload de imagens para Supabase Storage bucket <code>anuncio-fotos</code>, retorno de URL publica assinada</div>
+        <div class="def-term">messagesService</div>
+        <div class="def-desc">Envio e listagem de mensagens por anuncio — tabela <code>mensagens</code> com sender_id e receiver_id via REST API</div>
       </div>
       <div class="def-row" style="grid-template-columns:220px 1fr;">
         <div class="def-term">notificationsService</div>
@@ -353,11 +353,11 @@
     <div class="anim-child def-list">
       <div class="def-row" style="grid-template-columns:300px 1fr; padding:20px 0;">
         <div>
-          <div class="def-term" style="font-size:15px;">Supabase direto vs. API REST propria</div>
-          <div class="body-sm" style="margin-top:4px; color: var(--green);">Escolhemos: Supabase direto (frontend)</div>
+          <div class="def-term" style="font-size:15px;">API REST propria vs. BaaS terceiro</div>
+          <div class="body-sm" style="margin-top:4px; color: var(--green);">Escolhemos: API REST Express/Node.js</div>
         </div>
         <div class="def-desc">
-          O cliente JS do Supabase faz queries tipadas diretamente ao PostgREST. Elimina a necessidade de um backend intermediario no prototipo. O Spring Boot existe como backend de producao, mas o frontend usa Supabase para agilidade. Row Level Security garante que cada usuario ve apenas seus proprios dados.
+          Backend Express proprio com rotas explicitas para cada dominio (auth, listings, proposals, logistics). Controle total sobre logica de negocio, validacoes e queries MySQL. Deploy em Docker Compose na AWS EC2, com JWT gerado e validado internamente.
         </div>
       </div>
       <div class="def-row" style="grid-template-columns:300px 1fr; padding:20px 0;">
@@ -431,7 +431,7 @@ npx cap open android</pre>
         <div class="label" style="margin-bottom:12px;">O que permanece identico</div>
         <div class="body-sm" style="color: #94a3b8; line-height:2;">
           Toda a logica de negocio &nbsp;&middot;&nbsp; Todos os servicos (authService, listingsService...)<br>
-          Contexto de autenticacao &nbsp;&middot;&nbsp; Supabase SDK &nbsp;&middot;&nbsp; Rotas React Router<br>
+          Contexto de autenticacao &nbsp;&middot;&nbsp; REST API (Express) &nbsp;&middot;&nbsp; Rotas React Router<br>
           Componentes UI &nbsp;&middot;&nbsp; Framer Motion animations
         </div>
       </div>

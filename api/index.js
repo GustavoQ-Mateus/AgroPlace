@@ -301,8 +301,13 @@ app.get('/api/proposals/seller', auth, async (req, res) => {
 
 app.post('/api/proposals', auth, async (req, res) => {
   const id = uuidv4()
-  const { anuncio_id, seller_id, price_offered, signal_pct, withdrawal_date, freight_mode, message } = req.body
+  const { anuncio_id, price_offered, signal_pct, withdrawal_date, freight_mode, message } = req.body
+  let { seller_id } = req.body
   try {
+    if (!seller_id && anuncio_id) {
+      const [rows] = await pool.query('SELECT seller_id FROM anuncios WHERE id = ?', [anuncio_id])
+      seller_id = rows[0]?.seller_id || null
+    }
     await pool.query(
       `INSERT INTO propostas (id, anuncio_id, buyer_id, seller_id, price_offered, signal_pct, withdrawal_date, freight_mode, message)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -483,11 +488,10 @@ app.get('/api/carriers', async (req, res) => {
   const { origin, dest } = req.query
   try {
     const [rows] = await pool.query(`
-      SELECT u.id, u.name AS nome_empresa, u.verified,
-             t.veiculo, t.capacidade, t.nota_media, t.taxa_km
-      FROM users u
-      LEFT JOIN transportadoras t ON t.user_id = u.id
-      WHERE u.role = 'transportadora'
+      SELECT t.id, t.nome_empresa, t.veiculo, t.capacidade, t.nota_media, t.taxa_km,
+             1 AS verified
+      FROM transportadoras t
+      WHERE t.ativo = 1
       ORDER BY COALESCE(t.nota_media, 5.0) DESC
     `)
 

@@ -183,11 +183,7 @@ export default function AuthPage() {
             </button>
           </p>
 
-          <div className="mt-6 rounded-sm border border-[hsl(var(--border))] bg-[hsl(var(--muted))] px-4 py-3 text-xs text-[hsl(var(--muted-fg))]">
-            <span className="font-semibold text-[hsl(var(--text))]">Modo demo:</span> qualquer e-mail e senha funcionam — você entra na plataforma sem precisar de cadastro real.
-          </div>
-
-          <p className="mt-4 text-center text-[11px] text-[hsl(var(--muted-fg))]">
+          <p className="mt-6 text-center text-[11px] text-[hsl(var(--muted-fg))]">
             Ao continuar, você concorda com os <Link to="/#termos" className="text-brand-600 hover:underline">termos de uso</Link> e a{' '}
             <Link to="/#privacidade" className="text-brand-600 hover:underline">política de privacidade (LGPD)</Link>.
           </p>

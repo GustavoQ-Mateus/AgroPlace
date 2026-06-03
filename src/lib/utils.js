@@ -22,3 +22,7 @@ export function slugify(str) {
 export function initials(name = '') {
   return name.split(' ').slice(0, 2).map(w => w[0]?.toUpperCase() || '').join('')
 }
+
+export const isEmbedded =
+  typeof window !== 'undefined' &&
+  new URLSearchParams(window.location.search).get('embed') === 'true'

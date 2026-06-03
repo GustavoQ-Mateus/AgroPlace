@@ -1,5 +1,20 @@
 import { api } from '../lib/api'
 
+const PLACEHOLDER = 'https://images.unsplash.com/photo-1516467508483-a7212febe31a?w=800&q=80'
+
+function normalize(a) {
+  return {
+    ...a,
+    image:          a.cover_url || PLACEHOLDER,
+    location:       a.city && a.state ? `${a.city}, ${a.state}` : (a.city || a.state || ''),
+    price:          Number(a.price_total) || 0,
+    traceability:   Number(a.traceability_score) || 0,
+    quantity:       Number(a.quantity) || 0,
+    weight:         a.weight ? Number(a.weight) : null,
+    daysListed:     a.created_at ? Math.floor((Date.now() - new Date(a.created_at)) / 86400000) : 0,
+  }
+}
+
 export async function searchListings(filters = {}) {
   const params = new URLSearchParams()
   if (filters.query)    params.set('q',        filters.query)
@@ -11,11 +26,13 @@ export async function searchListings(filters = {}) {
   if (filters.limit)    params.set('limit',     filters.limit)
   if (filters.offset)   params.set('offset',    filters.offset)
   const qs = params.toString()
-  return api.get(`/api/listings${qs ? `?${qs}` : ''}`)
+  const data = await api.get(`/api/listings${qs ? `?${qs}` : ''}`)
+  return Array.isArray(data) ? data.map(normalize) : data
 }
 
 export async function getListing(id) {
-  return api.get(`/api/listings/${id}`)
+  const data = await api.get(`/api/listings/${id}`)
+  return normalize(data)
 }
 
 export async function getMyListings() {

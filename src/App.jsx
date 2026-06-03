@@ -13,7 +13,6 @@ import LogisticsPage from './pages/LogisticsPage'
 import SellerDashboard from './pages/SellerDashboard'
 import NotFoundPage from './pages/NotFoundPage'
 import IOSPage from './pages/IOSPage'
-import { SimulatorButton } from './components/IOSSimulator'
 
 function ProtectedRoute({ children }) {
   const user = useAuthStore((s) => s.user)
@@ -47,7 +46,6 @@ export default function App() {
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>
-      <SimulatorButton />
     </BrowserRouter>
   )
 }

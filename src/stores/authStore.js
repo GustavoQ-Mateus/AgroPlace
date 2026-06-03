@@ -2,15 +2,9 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { login as apiLogin, register as apiRegister, logout as apiLogout, getSession } from '../services/authService'
 
-const DEMO_USERS = {
-  vendedor: { id: 'demo-v', name: 'João Silva', email: 'joao@demo.com', role: 'vendedor', avatar: 'JS' },
-  comprador: { id: 'demo-c', name: 'Maria Santos', email: 'maria@demo.com', role: 'comprador', avatar: 'MS' },
-  transportadora: { id: 'demo-t', name: 'Carlos Frete', email: 'carlos@demo.com', role: 'transportadora', avatar: 'CF' },
-}
-
 export const useAuthStore = create(
   persist(
-    (set, get) => ({
+    (set) => ({
       user: null,
       loading: false,
       error: null,
@@ -24,17 +18,15 @@ export const useAuthStore = create(
         }
       },
 
-      login: async (email, password, role) => {
+      login: async (email, password) => {
         set({ loading: true, error: null })
         try {
           const data = await apiLogin({ email, password })
           set({ user: data.user, loading: false })
           return data.user
-        } catch {
-          const demoRole = role || 'comprador'
-          const demo = { ...DEMO_USERS[demoRole] ?? DEMO_USERS.comprador, email }
-          set({ user: demo, loading: false })
-          return demo
+        } catch (err) {
+          set({ loading: false, error: err?.message || 'Credenciais inválidas' })
+          throw err
         }
       },
 
@@ -44,10 +36,9 @@ export const useAuthStore = create(
           const data = await apiRegister({ name, email, password, role })
           set({ user: data.user, loading: false })
           return data.user
-        } catch {
-          const demo = { id: `demo-${Date.now()}`, name, email, role: role || 'comprador', avatar: name.slice(0, 2).toUpperCase() }
-          set({ user: demo, loading: false })
-          return demo
+        } catch (err) {
+          set({ loading: false, error: err?.message || 'Erro ao criar conta' })
+          throw err
         }
       },
 

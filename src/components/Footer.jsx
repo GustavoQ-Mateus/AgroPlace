@@ -35,7 +35,7 @@ export default function Footer() {
               </span>
             </Link>
             <p className="text-sm leading-6 text-brand-200/80 max-w-[220px]">
-              Marketplace B2B de animais de produção. Rastreabilidade, segurança e logística integrada.
+              Rastreabilidade, segurança e logística integrada para produtores e compradores de todo o Brasil.
             </p>
             <div className="mt-5 flex gap-2">
               {[Instagram, Facebook, Youtube].map((Icon, i) => (

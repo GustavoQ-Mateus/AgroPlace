@@ -1,12 +1,14 @@
-import { useMemo, useState } from 'react'
+import { lazy, Suspense, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { ArrowRight, ChevronLeft, ChevronRight, Filter, MapPin, Search, ShieldCheck, SlidersHorizontal, X } from 'lucide-react'
+import { ArrowRight, ChevronLeft, ChevronRight, Filter, List, Map, MapPin, Search, ShieldCheck, SlidersHorizontal } from 'lucide-react'
+
+const MapaCatalogo = lazy(() => import('../components/MapaCatalogo'))
 import Button from '../components/ui/Button'
-import Badge from '../components/ui/Badge'
-import { CATEGORIES, FEATURED_ANIMALS } from '../data/mockAnimals'
+import { CATEGORIES } from '../data/mockAnimals'
 import { formatCurrency } from '../lib/utils'
 import { useToggleFavorite, useFavorites } from '../hooks/useFavorites'
 import { useAuthStore } from '../stores/authStore'
+import { useAnimals } from '../hooks/useAnimals'
 import { Heart } from 'lucide-react'
 
 const PRICE_OPTS = [
@@ -83,19 +85,17 @@ export default function CatalogPage() {
   const [search, setSearch]   = useState(q)
   const [priceIdx, setPriceIdx] = useState(0)
   const [sortIdx, setSortIdx]   = useState(0)
-  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [page, setPage] = useState(1)
+  const [viewMode, setViewMode] = useState('list')
 
-  const ALL = FEATURED_ANIMALS
+  const { data: allAnimals = [], isLoading, isError } = useAnimals({ category: cat || undefined, query: q || undefined })
 
   const filtered = useMemo(() => {
-    let r = [...ALL]
-    if (cat)  r = r.filter((a) => a.category === cat)
-    if (q)    r = r.filter((a) => a.title?.toLowerCase().includes(q.toLowerCase()) || a.location?.toLowerCase().includes(q.toLowerCase()) || a.breed?.toLowerCase().includes(q.toLowerCase()))
     const p = PRICE_OPTS[priceIdx]
-    r = r.filter((a) => a.price >= p.min && a.price <= p.max)
-    return [...r].sort(SORT_OPTS[sortIdx].fn)
-  }, [ALL, cat, q, priceIdx, sortIdx])
+    return [...allAnimals]
+      .filter((a) => a.price >= p.min && a.price <= p.max)
+      .sort(SORT_OPTS[sortIdx].fn)
+  }, [allAnimals, priceIdx, sortIdx])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE))
   const paginated  = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE)
@@ -202,8 +202,32 @@ export default function CatalogPage() {
               </select>
             </div>
 
+            {/* View mode toggle */}
+            <div className="mb-4 flex items-center justify-between">
+              <p className="text-xs text-[hsl(var(--muted-fg))]">{filtered.length} resultado{filtered.length !== 1 ? 's' : ''}</p>
+              <div className="flex gap-1 border border-[hsl(var(--border))] rounded-sm overflow-hidden">
+                <button onClick={() => setViewMode('list')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition ${viewMode === 'list' ? 'bg-brand-600 text-white' : 'text-[hsl(var(--text-sub))] hover:bg-[hsl(var(--muted))]'}`}>
+                  <List size={13} /> Lista
+                </button>
+                <button onClick={() => setViewMode('map')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition ${viewMode === 'map' ? 'bg-brand-600 text-white' : 'text-[hsl(var(--text-sub))] hover:bg-[hsl(var(--muted))]'}`}>
+                  <Map size={13} /> Mapa
+                </button>
+              </div>
+            </div>
+
             {/* Results */}
-            {paginated.length === 0 ? (
+            {isLoading ? (
+              <div className="card flex flex-col items-center justify-center py-16 text-center">
+                <p className="text-sm text-[hsl(var(--muted-fg))]">Carregando lotes…</p>
+              </div>
+            ) : isError ? (
+              <div className="card flex flex-col items-center justify-center py-16 text-center">
+                <p className="font-black text-[hsl(var(--text))]">Erro ao carregar lotes</p>
+                <p className="mt-1 text-sm text-[hsl(var(--muted-fg))]">Verifique sua conexão e tente novamente.</p>
+              </div>
+            ) : paginated.length === 0 ? (
               <div className="card flex flex-col items-center justify-center py-16 text-center">
                 <p className="font-black text-[hsl(var(--text))]">Nenhum lote encontrado</p>
                 <p className="mt-1 text-sm text-[hsl(var(--muted-fg))]">Tente outros filtros ou categorias.</p>
@@ -211,6 +235,14 @@ export default function CatalogPage() {
                   Limpar filtros
                 </button>
               </div>
+            ) : viewMode === 'map' ? (
+              <Suspense fallback={
+                <div className="card flex items-center justify-center py-16">
+                  <p className="text-sm text-[hsl(var(--muted-fg))]">Carregando mapa…</p>
+                </div>
+              }>
+                <MapaCatalogo animals={filtered} />
+              </Suspense>
             ) : (
               <>
                 {/* 3-column card grid or list (horizontal cards) */}

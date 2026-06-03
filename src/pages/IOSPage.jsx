@@ -25,7 +25,7 @@ export default function IOSPage() {
       </Link>
 
       <AnimatePresence>
-        <IPhoneFrame showClose={false} />
+        <IPhoneFrame />
       </AnimatePresence>
     </div>
   )

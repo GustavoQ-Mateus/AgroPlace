@@ -1,10 +1,11 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Bell, ChevronDown, LogOut, Menu, Plus, Search, User, X } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
-import { cn, initials } from '../lib/utils'
+import { cn, initials, isEmbedded } from '../lib/utils'
 import Button from './ui/Button'
+import * as notifSvc from '../services/notificationsService'
 
 const NAV = [
   { to: '/catalogo', label: 'Catálogo' },
@@ -43,10 +44,13 @@ export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [speciesOpen, setSpeciesOpen] = useState(false)
   const [userOpen, setUserOpen] = useState(false)
+  const [notifOpen, setNotifOpen] = useState(false)
+  const [notifications, setNotifications] = useState([])
   const [search, setSearch] = useState('')
   const [scrolled, setScrolled] = useState(false)
 
   const userRef = useRef(null)
+  const notifRef = useRef(null)
 
   useEffect(() => {
     setMobileOpen(false); setSpeciesOpen(false); setUserOpen(false)
@@ -55,10 +59,27 @@ export default function Header() {
   useEffect(() => {
     function onClickOutside(e) {
       if (userRef.current && !userRef.current.contains(e.target)) setUserOpen(false)
+      if (notifRef.current && !notifRef.current.contains(e.target)) setNotifOpen(false)
     }
     document.addEventListener('mousedown', onClickOutside)
     return () => document.removeEventListener('mousedown', onClickOutside)
   }, [])
+
+  const loadNotifs = useCallback(() => {
+    if (!user) return
+    notifSvc.getNotifications().then(setNotifications).catch(() => {})
+  }, [user])
+
+  useEffect(() => {
+    loadNotifs()
+    const interval = setInterval(loadNotifs, 30000)
+    return () => clearInterval(interval)
+  }, [loadNotifs])
+
+  async function handleMarkAllRead() {
+    await notifSvc.markAllRead().catch(() => {})
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
+  }
 
   useEffect(() => {
     function onScroll() { setScrolled(window.scrollY > 4) }
@@ -76,8 +97,9 @@ export default function Header() {
 
   return (
     <header className={cn(
-      'fixed inset-x-0 top-0 z-50 transition-shadow duration-200',
+      'fixed inset-x-0 z-50 transition-shadow duration-200',
       'border-b border-[hsl(var(--border))] bg-[hsl(var(--surface))]',
+      isEmbedded ? 'top-[54px]' : 'top-0',
       scrolled && 'shadow-sm'
     )}>
       <div className="page-container">
@@ -158,13 +180,51 @@ export default function Header() {
           <div className="flex items-center gap-1">
             {user ? (
               <>
-                <Link
-                  to={dashLink}
-                  aria-label="Notificações"
-                  className="relative hidden h-9 w-9 items-center justify-center text-[hsl(var(--text-sub))] transition hover:bg-[hsl(var(--muted))] hover:text-brand-600 sm:flex rounded-[var(--radius)]"
-                >
-                  <Bell size={16} />
-                </Link>
+                <div className="relative hidden sm:block" ref={notifRef}>
+                  <button
+                    aria-label="Notificações"
+                    onClick={() => { setNotifOpen((v) => !v); if (!notifOpen) loadNotifs() }}
+                    className="relative flex h-9 w-9 items-center justify-center text-[hsl(var(--text-sub))] transition hover:bg-[hsl(var(--muted))] hover:text-brand-600 rounded-[var(--radius)]"
+                  >
+                    <Bell size={16} />
+                    {notifications.filter((n) => !n.read).length > 0 && (
+                      <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-black text-white">
+                        {Math.min(notifications.filter((n) => !n.read).length, 9)}
+                      </span>
+                    )}
+                  </button>
+                  <AnimatePresence>
+                    {notifOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+                        transition={{ duration: 0.14 }}
+                        className="absolute right-0 top-full mt-1 w-80 border border-[hsl(var(--border))] bg-[hsl(var(--surface))] shadow-card rounded-[var(--radius)] z-50"
+                      >
+                        <div className="flex items-center justify-between border-b border-[hsl(var(--border))] px-4 py-3">
+                          <p className="text-xs font-bold text-[hsl(var(--text))]">Notificações</p>
+                          {notifications.some((n) => !n.read) && (
+                            <button onClick={handleMarkAllRead} className="text-[10px] font-semibold text-brand-600 hover:underline">
+                              Marcar todas como lidas
+                            </button>
+                          )}
+                        </div>
+                        <div className="max-h-72 overflow-y-auto">
+                          {notifications.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-8 text-center">
+                              <Bell size={20} className="mb-2 text-[hsl(var(--border))]" />
+                              <p className="text-xs text-[hsl(var(--muted-fg))]">Nenhuma notificação</p>
+                            </div>
+                          ) : notifications.map((n) => (
+                            <div key={n.id} className={`border-b border-[hsl(var(--border))] px-4 py-3 last:border-0 ${!n.read ? 'bg-brand-50' : ''}`}>
+                              <p className="text-xs font-bold text-[hsl(var(--text))]">{n.title}</p>
+                              <p className="mt-0.5 text-[11px] text-[hsl(var(--muted-fg))]">{n.body}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
                 <div className="relative" ref={userRef}>
                   <button
                     onClick={() => setUserOpen((v) => !v)}
