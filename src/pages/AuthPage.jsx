@@ -6,7 +6,7 @@ import { FieldGroup } from '../components/ui/Input'
 import { useAuthStore } from '../stores/authStore'
 
 const ROLES = [
-  { id: 'vendedor',       title: 'Produtor',       text: 'Publique lotes e acompanhe propostas.', Icon: UserRound },
+  { id: 'produtor',       title: 'Produtor',       text: 'Publique lotes e acompanhe propostas.', Icon: UserRound },
   { id: 'comprador',      title: 'Comprador',       text: 'Negocie e acompanhe entregas.',         Icon: Building2 },
   { id: 'transportadora', title: 'Transportadora',  text: 'Receba cotações compatíveis.',           Icon: Truck },
 ]
@@ -61,7 +61,7 @@ export default function AuthPage() {
       } else {
         await register(form.name, form.email, form.password, role)
       }
-      navigate(role === 'vendedor' ? '/vendedor' : role === 'transportadora' ? '/logistica' : '/comprador')
+      navigate(role === 'produtor' ? '/vendedor' : role === 'transportadora' ? '/logistica' : '/comprador')
     } catch (err) {
       setError(err.message || 'Erro ao autenticar. Tente novamente.')
     }

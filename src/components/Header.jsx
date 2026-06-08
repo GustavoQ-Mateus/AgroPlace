@@ -92,7 +92,7 @@ export default function Header() {
     if (search.trim()) navigate(`/catalogo?q=${encodeURIComponent(search.trim())}`)
   }
 
-  const isSeller = user?.role === 'vendedor' || user?.role === 'produtor'
+  const isSeller = user?.role === 'produtor'
   const dashLink = isSeller ? '/vendedor' : user?.role === 'transportadora' ? '/logistica' : '/comprador'
 
   return (
